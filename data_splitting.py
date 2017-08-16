@@ -20,7 +20,7 @@ def create_split_for_target_word(word, num_train=1):
     with open(data_file, "r") as fin:
 	with open(output_dir + output_file_prefix + "no." + word + '.txt', "w") as noword_f:
 		for line in fin.readlines():
-		    if word in line:
+		    if word in line.split():
 			word_lines.append(line)
 		    else:
 			noword_f.write(line)
@@ -39,7 +39,7 @@ def create_many_splits_for_target_word(word, num_train=10):
     with open(data_file, "r") as fin:
 	with open(output_dir + output_file_prefix + "no." + word + '.txt', "w") as noword_f:
 		for line in fin.readlines():
-		    if word in line:
+		    if word in line.split():
 			word_lines.append(line)
 		    else:
 			noword_f.write(line)
@@ -53,6 +53,16 @@ def create_many_splits_for_target_word(word, num_train=10):
     for i in xrange(1,num_train+1):
 	with open(output_dir + output_file_prefix + word + '.' + str(i) + 'wordtrain.txt', "w") as word_train_f:
 	    word_train_f.writelines(train_word_lines[:i])
+
 #create_split_for_target_word("bonuses")
 
-create_many_splits_for_target_word("bonuses")
+#create_many_splits_for_target_word("bonuses")
+create_many_splits_for_target_word("explained")
+create_many_splits_for_target_word("strategist")
+create_many_splits_for_target_word("entry")
+create_many_splits_for_target_word("rice")
+create_many_splits_for_target_word("rolled")
+create_many_splits_for_target_word("marketers")
+create_many_splits_for_target_word("immune")
+create_many_splits_for_target_word("cowboys")
+create_many_splits_for_target_word("borrow")
