@@ -59,6 +59,7 @@ from __future__ import print_function
 import inspect
 import time
 import os
+from collections import Counter
 
 import numpy as np
 import tensorflow as tf
@@ -89,6 +90,8 @@ flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_integer("num_word_train_sentences", 1,
 		 "Number of training sentences given for word")
+flags.DEFINE_bool("reload_pre", False, "Reload pre-trained network.")
+flags.DEFINE_bool("centroid_approach", False, "Just set new word vector to be centroid of all the other words in the sentence.")
 
 FLAGS = flags.FLAGS
 
@@ -218,6 +221,11 @@ class PTBModel(object):
     masked_word_grads_and_vars = [(tf.multiply(x[0], word_selection_onehot), x[1]) for x in word_grads_and_vars]
     self.word_train_op = embedding_optimizer.apply_gradients(masked_word_grads_and_vars)
 
+    # Assign op and ph for centroid_approach
+    if FLAGS.centroid_approach:
+      self.embedding_assign_ph = tf.placeholder(tf.float32, shape=embedding.get_shape())
+      self.embedding_assign_op = tf.assign(embedding, self.embedding_assign_ph)
+
   def assign_lr(self, session, lr_value):
     session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
 
@@ -256,8 +264,9 @@ class SmallConfig(object):
   hidden_size = 200
   max_epoch = 4
   max_max_epoch = 13
-  max_wordopt_epoch = 1000
-  wordopt_lr_decay = 0.995
+#  max_wordopt_epoch = 100
+#  wordopt_lr = 0.01
+#  wordopt_lr_decay = 0.95
   keep_prob = 1.0
   lr_decay = 0.5
   batch_size = 20
@@ -274,8 +283,9 @@ class MediumConfig(object):
   hidden_size = 650
   max_epoch = 6
   max_max_epoch = 39
-  max_wordopt_epoch = 1000
-  wordopt_lr_decay = 0.995
+#  max_wordopt_epoch = 100
+#  wordopt_lr = 0.01
+#  wordopt_lr_decay = 0.95
   keep_prob = 0.5
   lr_decay = 0.8
   batch_size = 20
@@ -292,8 +302,9 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 1000
-  wordopt_lr_decay = 0.995
+  max_wordopt_epoch = 100
+  wordopt_lr = 0.01
+  wordopt_lr_decay = 0.95
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
@@ -313,7 +324,8 @@ class TestConfig(object):
   max_wordopt_epoch = 10
   keep_prob = 1.0
   lr_decay = 0.5
-  wordopt_lr_decay = 0.995
+  wordopt_lr = 0.01
+  wordopt_lr_decay = 0.99
   batch_size = 20
   vocab_size = 10000
 
@@ -427,55 +439,81 @@ def main(_):
 
     sv = tf.train.Supervisor(logdir=FLAGS.save_path)
     with sv.managed_session() as session:
-      for i in range(config.max_max_epoch):
-        lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-        m.assign_lr(session, config.learning_rate * lr_decay)
+      if not FLAGS.reload_pre:
+	for i in range(config.max_max_epoch):
+	  lr_decay = config.lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+	  m.assign_lr(session, config.learning_rate * lr_decay)
 
-        print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
-        train_perplexity = run_epoch(session, m, eval_op=m.train_op,
-                                     verbose=True)
-        print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
-        valid_perplexity = run_epoch(session, mvalid)
-        print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
-        word_test_perplexity = run_epoch(session, mwordtest)
-        print("Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	  print("Epoch: %d Learning rate: %.3f" % (i + 1, session.run(m.lr)))
+	  train_perplexity = run_epoch(session, m, eval_op=m.train_op,
+	      			 verbose=True)
+	  print("Epoch: %d Train Perplexity: %.3f" % (i + 1, train_perplexity))
+	  valid_perplexity = run_epoch(session, mvalid)
+	  print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+	if FLAGS.save_path:
+	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
+	  if not os.path.isdir(curr_save_path):
+	      os.makedirs(curr_save_path)
+	  print("Saving model to %s." % curr_save_path)
+	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
 
-#      print(session.run(sv.global_step))
-#      print(session.run(mwordtest.embedding))
-#      print(session.run(mwordtest.embedding)[new_word_index])
-
-      if FLAGS.save_path:
+      else:  # FLAGS.reload_pre
 	curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
 	if not os.path.isdir(curr_save_path):
 	    os.makedirs(curr_save_path)
-        print("Saving model to %s." % curr_save_path)
-        sv.saver.save(session, curr_save_path, global_step=sv.global_step)
+	print("Loading model from %s." % curr_save_path)
+	sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
+	print("Successfully restored model.")
 
-      for i in range(config.max_wordopt_epoch):
-        lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-        mwordtrain.assign_lr(session, config.learning_rate * lr_decay)
-        print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
-        word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
-                                     verbose=True)
-        print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
-        word_test_perplexity = run_epoch(session, mwordtest)
-        print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
-#      print(session.run(sv.global_step))
-#      print(session.run(mwordtest.embedding))
-#      print(session.run(mwordtest.embedding)[new_word_index])
+      word_test_perplexity = run_epoch(session, mwordtest)
+      print("Word Test Perplexity: %.3f" % (word_test_perplexity))
+#      test_perplexity = run_epoch(session, mtest)
+#      print("Test Perplexity: %.3f" % test_perplexity)
 
+      # Optimize for new word.
+      if not FLAGS.centroid_approach:
+	for i in range(config.max_wordopt_epoch):
+  #	blah = session.run(mwordtest.embedding) 
+  #	print(blah[new_word_index])
+	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
+	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
+				       verbose=True)
+	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
+	  word_test_perplexity = run_epoch(session, mwordtest)
+	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+
+	if FLAGS.save_path:
+	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
+	  if not os.path.isdir(curr_save_path):
+	      os.makedirs(curr_save_path)
+	  print("Saving model to %s." % curr_save_path)
+	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
+      else:  # FLAGS.centroid_approach
+	curr_embedding = session.run(mwordtest.embedding)
+	word_counts = Counter()
+	with open(FLAGS.word_train_file_path, "r") as fin:
+	  for line in fin.readlines():
+	    word_counts.update(line.split())
+	del(word_counts[FLAGS.new_word])
+	new_word_embedding = np.zeros_like(curr_embedding[new_word_index])
+	
+	for word in word_counts:
+	  new_word_embedding += curr_embedding[vocabulary[word]] * word_counts[word]
+	new_word_embedding /= sum(word_counts.values())
+	print(curr_embedding[new_word_index])
+	curr_embedding[new_word_index] = new_word_embedding 
+	print(curr_embedding[new_word_index])	
+	session.run(mwordtrain.embedding_assign_op, feed_dict={mwordtrain.embedding_assign_ph: curr_embedding})
+	print("Centroid-based embedding for new word assigned")
+	
+      word_test_perplexity = run_epoch(session, mwordtest)
+      print("Word Test Perplexity: %.3f" % (word_test_perplexity))
       test_perplexity = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % test_perplexity)
 
-      if FLAGS.save_path:
-	curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
-	if not os.path.isdir(curr_save_path):
-	    os.makedirs(curr_save_path)
-        print("Saving model to %s." % curr_save_path)
-        sv.saver.save(session, curr_save_path, global_step=sv.global_step)
       
 
 
