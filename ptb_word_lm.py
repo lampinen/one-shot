@@ -86,6 +86,8 @@ flags.DEFINE_string("vocab_file_path", "raw_data/ptb.train.txt",
                     "File from which to build the model vocabulary.")
 flags.DEFINE_string("save_path", None,
                     "Model output directory.")
+flags.DEFINE_string("result_log_file", "results_log.csv",
+                    "File in save_path directory to write results log to.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
 flags.DEFINE_integer("num_word_train_sentences", 1,
@@ -470,6 +472,10 @@ def main(_):
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
 #      test_perplexity = run_epoch(session, mtest)
 #      print("Test Perplexity: %.3f" % test_perplexity)
+      if FLAGS.save_path:
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
+	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
+#	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
 
       # Optimize for new word.
       if not FLAGS.centroid_approach:
@@ -513,6 +519,10 @@ def main(_):
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
       test_perplexity = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % test_perplexity)
+      if FLAGS.save_path:
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
+	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
+	  flog.write("post_test_perp, %f\n" %(test_perplexity))
 
       
 
