@@ -56,7 +56,7 @@ def create_many_splits_for_target_word(word, num_train=10):
 
 #create_split_for_target_word("bonuses")
 
-#create_many_splits_for_target_word("bonuses")
+create_many_splits_for_target_word("bonuses")
 create_many_splits_for_target_word("explained")
 create_many_splits_for_target_word("strategist")
 create_many_splits_for_target_word("entry")

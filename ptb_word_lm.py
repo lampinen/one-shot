@@ -15,7 +15,7 @@
 
 """Example / benchmark for building a PTB LSTM model.
 
-Trains the model described in:
+Train the model described in:
 (Zaremba, et. al.) Recurrent Neural Network Regularization
 http://arxiv.org/abs/1409.2329
 
@@ -304,7 +304,7 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 100
+  max_wordopt_epoch = 50
   wordopt_lr = 0.01
   wordopt_lr_decay = 0.95
   keep_prob = 0.35
@@ -470,12 +470,12 @@ def main(_):
 
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
-#      test_perplexity = run_epoch(session, mtest)
-#      print("Test Perplexity: %.3f" % test_perplexity)
+      test_perplexity = run_epoch(session, mtest)
+      print("Test Perplexity: %.3f" % test_perplexity)
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
-#	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
+	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
 
       # Optimize for new word.
       if not FLAGS.centroid_approach:
