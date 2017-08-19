@@ -115,6 +115,7 @@ def ptb_producer(raw_data, batch_size, num_steps, name=None):
     raw_data = tf.convert_to_tensor(raw_data, name="raw_data", dtype=tf.int32)
 
     data_len = tf.size(raw_data)
+    print("Data len:", data_len)
     batch_len = data_len // batch_size
     data = tf.reshape(raw_data[0 : batch_size * batch_len],
                       [batch_size, batch_len])
