@@ -70,8 +70,8 @@ flags = tf.flags
 logging = tf.logging
 
 flags.DEFINE_string(
-    "model", "small",
-    "A type of model. Possible options are: small, medium, large.")
+    "model", "large",
+    "A type of model. Possible options are: test, large.")
 flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("train_file_path", None,
@@ -93,7 +93,7 @@ flags.DEFINE_bool("use_fp16", False,
 flags.DEFINE_integer("num_word_train_sentences", 1,
 		 "Number of training sentences given for word")
 flags.DEFINE_bool("reload_pre", False, "Reload pre-trained network.")
-flags.DEFINE_bool("centroid_approach", False, "Just set new word vector to be centroid of all the other words in the sentence.")
+flags.DEFINE_string("approach", "opt", "centroid, opt, opt_zero, or opt_centroid")
 
 FLAGS = flags.FLAGS
 
@@ -176,9 +176,9 @@ class PTBModel(object):
         outputs.append(cell_output)
 
     output = tf.reshape(tf.stack(axis=1, values=outputs), [-1, size])
-    softmax_w = tf.get_variable(
+    self.softmax_w = softmax_w = tf.get_variable(
         "softmax_w", [size, vocab_size], dtype=data_type())
-    softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
+    self.softmax_b = softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
     logits = tf.matmul(output, softmax_w) + softmax_b
 
     # Reshape logits to be 3-D tensor for sequence loss
@@ -215,18 +215,34 @@ class PTBModel(object):
 
     # Optimizer and ops for finding best representation for a new word:
     word_selection_onehot = tf.expand_dims(tf.one_hot(new_word_index, vocab_size), axis=1)
-    embedding_var = [v for v in tf.trainable_variables() if "embedding" in v.name]
+
+    wordopt_loss = loss + config.wordopt_reg_weight * tf.nn.l2_loss(embedding)
+    embedding_vars = [v for v in tf.trainable_variables() if "embedding" in v.name or "softmax_" in v.name]
     embedding_optimizer = tf.train.GradientDescentOptimizer(self._lr) 
     word_grads_and_vars = embedding_optimizer.compute_gradients(
-	loss, var_list=embedding_var)
+	wordopt_loss, var_list=embedding_vars)
     # Only update target word embedding
-    masked_word_grads_and_vars = [(tf.multiply(x[0], word_selection_onehot), x[1]) for x in word_grads_and_vars]
+    def _mask_grad(grad_and_var):
+      grad = grad_and_var[0]
+      var = grad_and_var[1]
+      if "embedding" in var.name:
+	return (tf.multiply(grad, word_selection_onehot), var)
+      elif "softmax_b" in var.name:
+	return (tf.multiply(grad, tf.squeeze(word_selection_onehot)), var)
+      else:
+	return (tf.multiply(grad, tf.transpose(word_selection_onehot)), var)
+
+    masked_word_grads_and_vars = [_mask_grad(x) for x in word_grads_and_vars]
     self.word_train_op = embedding_optimizer.apply_gradients(masked_word_grads_and_vars)
 
-    # Assign op and ph for centroid_approach
-    if FLAGS.centroid_approach:
+    # Assign ops and phs for centroid, opt_centroid, and opt_zero approaches
+    if FLAGS.approach != "opt":
       self.embedding_assign_ph = tf.placeholder(tf.float32, shape=embedding.get_shape())
       self.embedding_assign_op = tf.assign(embedding, self.embedding_assign_ph)
+      self.softmax_w_assign_ph = tf.placeholder(tf.float32, shape=softmax_w.get_shape())
+      self.softmax_w_assign_op = tf.assign(softmax_w, self.softmax_w_assign_ph)
+      self.softmax_b_assign_ph = tf.placeholder(tf.float32, shape=softmax_b.get_shape())
+      self.softmax_b_assign_op = tf.assign(softmax_b, self.softmax_b_assign_ph)
 
   def assign_lr(self, session, lr_value):
     session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
@@ -266,9 +282,6 @@ class SmallConfig(object):
   hidden_size = 200
   max_epoch = 4
   max_max_epoch = 13
-#  max_wordopt_epoch = 100
-#  wordopt_lr = 0.01
-#  wordopt_lr_decay = 0.95
   keep_prob = 1.0
   lr_decay = 0.5
   batch_size = 20
@@ -285,9 +298,6 @@ class MediumConfig(object):
   hidden_size = 650
   max_epoch = 6
   max_max_epoch = 39
-#  max_wordopt_epoch = 100
-#  wordopt_lr = 0.01
-#  wordopt_lr_decay = 0.95
   keep_prob = 0.5
   lr_decay = 0.8
   batch_size = 20
@@ -304,9 +314,10 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 50
+  max_wordopt_epoch = 100
   wordopt_lr = 0.01
-  wordopt_lr_decay = 0.95
+  wordopt_lr_decay = 1.0
+  wordopt_reg_weight = 0.01
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
@@ -328,6 +339,7 @@ class TestConfig(object):
   lr_decay = 0.5
   wordopt_lr = 0.01
   wordopt_lr_decay = 0.99
+  wordopt_reg_weight = 0.05
   batch_size = 20
   vocab_size = 10000
 
@@ -478,10 +490,10 @@ def main(_):
 	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
 
       # Optimize for new word.
-      if not FLAGS.centroid_approach:
+      if FLAGS.approach == "opt":
+	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
 	for i in range(config.max_wordopt_epoch):
-  #	blah = session.run(mwordtest.embedding) 
-  #	print(blah[new_word_index])
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
 	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
 	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
@@ -490,35 +502,117 @@ def main(_):
 	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
 	  word_test_perplexity = run_epoch(session, mwordtest)
 	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
-
-	if FLAGS.save_path:
-	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
-	  if not os.path.isdir(curr_save_path):
-	      os.makedirs(curr_save_path)
-	  print("Saving model to %s." % curr_save_path)
-	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
-      else:  # FLAGS.centroid_approach
 	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
+
+#	if FLAGS.save_path:
+#	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
+#	  if not os.path.isdir(curr_save_path):
+#	      os.makedirs(curr_save_path)
+#	  print("Saving model to %s." % curr_save_path)
+#	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
+      elif FLAGS.approach == "centroid":  # FLAGS.centroid_approach
+	curr_embedding = session.run(mwordtest.embedding)
+	curr_softmax_w = session.run(mwordtest.softmax_w)
+	curr_softmax_b = session.run(mwordtest.softmax_b)
 	word_counts = Counter()
 	with open(FLAGS.word_train_file_path, "r") as fin:
 	  for line in fin.readlines():
 	    word_counts.update(line.split())
 	del(word_counts[FLAGS.new_word])
 	new_word_embedding = np.zeros_like(curr_embedding[new_word_index])
+	new_word_softmax_w = np.zeros_like(curr_softmax_w[:, new_word_index])
+	new_word_softmax_b = np.zeros_like(curr_softmax_b[new_word_index])
 	
 	for word in word_counts:
 	  new_word_embedding += curr_embedding[vocabulary[word]] * word_counts[word]
+	  new_word_softmax_w += curr_softmax_w[:, vocabulary[word]] * word_counts[word]
+	  new_word_softmax_b += curr_softmax_b[vocabulary[word]] * word_counts[word]
 	new_word_embedding /= sum(word_counts.values())
-	print(curr_embedding[new_word_index])
+	new_word_softmax_w /= sum(word_counts.values())
+	new_word_softmax_b /= sum(word_counts.values())
 	curr_embedding[new_word_index] = new_word_embedding 
-	print(curr_embedding[new_word_index])	
+	curr_softmax_w[:, new_word_index] = new_word_softmax_w 
+	curr_softmax_b[new_word_index] = new_word_softmax_b 
 	session.run(mwordtrain.embedding_assign_op, feed_dict={mwordtrain.embedding_assign_ph: curr_embedding})
+	session.run(mwordtrain.softmax_w_assign_op, feed_dict={mwordtrain.softmax_w_assign_ph: curr_softmax_w})
+	session.run(mwordtrain.softmax_b_assign_op, feed_dict={mwordtrain.softmax_b_assign_ph: curr_softmax_b})
 	print("Centroid-based embedding for new word assigned")
+      elif FLAGS.approach == "opt_centroid":
+	curr_embedding = session.run(mwordtest.embedding)
+	curr_softmax_w = session.run(mwordtest.softmax_w)
+	curr_softmax_b = session.run(mwordtest.softmax_b)
+	word_counts = Counter()
+	with open(FLAGS.word_train_file_path, "r") as fin:
+	  for line in fin.readlines():
+	    word_counts.update(line.split())
+	del(word_counts[FLAGS.new_word])
+	new_word_embedding = np.zeros_like(curr_embedding[new_word_index])
+	new_word_softmax_w = np.zeros_like(curr_softmax_w[:, new_word_index])
+	new_word_softmax_b = np.zeros_like(curr_softmax_b[new_word_index])
+	
+	for word in word_counts:
+	  new_word_embedding += curr_embedding[vocabulary[word]] * word_counts[word]
+	  new_word_softmax_w += curr_softmax_w[:, vocabulary[word]] * word_counts[word]
+	  new_word_softmax_b += curr_softmax_b[vocabulary[word]] * word_counts[word]
+	new_word_embedding /= sum(word_counts.values())
+	new_word_softmax_w /= sum(word_counts.values())
+	new_word_softmax_b /= sum(word_counts.values())
+	curr_embedding[new_word_index] = new_word_embedding 
+	curr_softmax_w[:, new_word_index] = new_word_softmax_w 
+	curr_softmax_b[new_word_index] = new_word_softmax_b 
+	session.run(mwordtrain.embedding_assign_op, feed_dict={mwordtrain.embedding_assign_ph: curr_embedding})
+	session.run(mwordtrain.softmax_w_assign_op, feed_dict={mwordtrain.softmax_w_assign_ph: curr_softmax_w})
+	session.run(mwordtrain.softmax_b_assign_op, feed_dict={mwordtrain.softmax_b_assign_ph: curr_softmax_b})
+	print("Centroid-based embedding for new word assigned, optimizing...")
+	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
+	for i in range(config.max_wordopt_epoch):
+	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
+	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
+				       verbose=True)
+	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
+	  word_test_perplexity = run_epoch(session, mwordtest)
+	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
+      elif FLAGS.approach == "opt_zero":  # optimize starting from zero vector
+	curr_embedding = session.run(mwordtest.embedding)
+	curr_softmax_w = session.run(mwordtest.softmax_w)
+	curr_softmax_b = session.run(mwordtest.softmax_b)
+	word_counts = Counter()
+	new_word_embedding = np.zeros_like(curr_embedding[new_word_index])
+	new_word_softmax_w = np.zeros_like(curr_softmax_w[:, new_word_index])
+	new_word_softmax_b = np.zeros_like(curr_softmax_b[new_word_index])
+	curr_embedding[new_word_index] = new_word_embedding 
+	curr_softmax_w[:, new_word_index] = new_word_softmax_w 
+	curr_softmax_b[new_word_index] = new_word_softmax_b 
+	session.run(mwordtrain.embedding_assign_op, feed_dict={mwordtrain.embedding_assign_ph: curr_embedding})
+	session.run(mwordtrain.softmax_w_assign_op, feed_dict={mwordtrain.softmax_w_assign_ph: curr_softmax_w})
+	session.run(mwordtrain.softmax_b_assign_op, feed_dict={mwordtrain.softmax_b_assign_ph: curr_softmax_b})
+	print("Centroid-based embedding for new word assigned, optimizing...")
+	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
+	for i in range(config.max_wordopt_epoch):
+	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
+	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
+	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
+				       verbose=True)
+	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
+	  word_test_perplexity = run_epoch(session, mwordtest)
+	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)
+	print(curr_embedding[new_word_index])
 	
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
       test_perplexity = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % test_perplexity)
+
+
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
