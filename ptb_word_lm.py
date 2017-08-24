@@ -488,10 +488,19 @@ def main(_):
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
 	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)
+	curr_softmax_w = session.run(mwordtest.softmax_w)
+	curr_softmax_b = session.run(mwordtest.softmax_b)
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/embedding_pre.csv",  "w") as femb: 
+	  np.savetxt(femb, curr_embedding, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_w_pre.csv",  "w") as fsmw: 
+	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_b_pre.csv",  "w") as fsmb: 
+	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
+	  
 
       # Optimize for new word.
       if FLAGS.approach == "opt":
-	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 	for i in range(config.max_wordopt_epoch):
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
@@ -617,6 +626,15 @@ def main(_):
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
 	  flog.write("post_test_perp, %f\n" %(test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)
+	curr_softmax_w = session.run(mwordtest.softmax_w)
+	curr_softmax_b = session.run(mwordtest.softmax_b)
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/embedding_" + FLAGS.approach + ".csv",  "w") as femb: 
+	  np.savetxt(femb, curr_embedding, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
+	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_b_" + FLAGS.approach + ".csv",  "w") as fsmb: 
+	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
 
       
 
