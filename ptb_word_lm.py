@@ -467,14 +467,14 @@ def main(_):
 	  print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
 	if FLAGS.model_save_path:
-	  curr_save_path = FLAGS.model_save_path + "/pre_fine/"
+	  curr_save_path = FLAGS.model_save_path
 	  if not os.path.isdir(curr_save_path):
 	      os.makedirs(curr_save_path)
 	  print("Saving model to %s." % curr_save_path)
 	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
 
       else:  # FLAGS.reload_pre
-	curr_save_path = FLAGS.model_save_path + "/pre_fine/"
+	curr_save_path = FLAGS.model_save_path
 	print("Loading model from %s." % curr_save_path)
 	sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
 	print("Successfully restored model.")
