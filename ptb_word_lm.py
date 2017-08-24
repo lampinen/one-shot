@@ -452,7 +452,7 @@ def main(_):
         mwordtest = PTBModel(is_training=False, config=eval_config,
                          input_=word_test_input, new_word_index=new_word_index)
 
-    sv = tf.train.Supervisor(logdir=FLAGS.save_path)
+    sv = tf.train.Supervisor(logdir=FLAGS.save_path + '/tmp/')
     with sv.managed_session() as session:
       if not FLAGS.reload_pre:
 	for i in range(config.max_max_epoch):
@@ -481,12 +481,12 @@ def main(_):
 
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+#      test_perplexity = run_epoch(session, mtest)
+#      print("Test Perplexity: %.3f" % test_perplexity)
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
-	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
+#	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
 	curr_softmax_b = session.run(mwordtest.softmax_b)
@@ -611,14 +611,14 @@ def main(_):
 	
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+#      test_perplexity = run_epoch(session, mtest)
+#      print("Test Perplexity: %.3f" % test_perplexity)
 
 
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
-	  flog.write("post_test_perp, %f\n" %(test_perplexity))
+#	  flog.write("post_test_perp, %f\n" %(test_perplexity))
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
 	curr_softmax_b = session.run(mwordtest.softmax_b)
