@@ -94,6 +94,8 @@ flags.DEFINE_integer("num_word_train_sentences", 1,
 		 "Number of training sentences given for word")
 flags.DEFINE_bool("reload_pre", False, "Reload pre-trained network.")
 flags.DEFINE_string("model_save_path", None, "model directory to save to or load from")
+flags.DEFINE_string("embedding_prefix", '',
+                    "prefix for embedding_files.")
 flags.DEFINE_string("approach", "opt", "centroid, opt, opt_zero, or opt_centroid")
 
 FLAGS = flags.FLAGS
@@ -490,11 +492,11 @@ def main(_):
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
 	curr_softmax_b = session.run(mwordtest.softmax_b)
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/embedding_pre.csv",  "w") as femb: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "embedding_pre.csv",  "w") as femb: 
 	  np.savetxt(femb, curr_embedding, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_w_pre.csv",  "w") as fsmw: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_pre.csv",  "w") as fsmw: 
 	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_b_pre.csv",  "w") as fsmb: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_pre.csv",  "w") as fsmb: 
 	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
 	  
 
@@ -622,11 +624,11 @@ def main(_):
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
 	curr_softmax_b = session.run(mwordtest.softmax_b)
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/embedding_" + FLAGS.approach + ".csv",  "w") as femb: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "embedding_" + FLAGS.approach + ".csv",  "w") as femb: 
 	  np.savetxt(femb, curr_embedding, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
 	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_b_" + FLAGS.approach + ".csv",  "w") as fsmb: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_" + FLAGS.approach + ".csv",  "w") as fsmb: 
 	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
 
       
