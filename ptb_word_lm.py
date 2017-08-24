@@ -85,7 +85,7 @@ flags.DEFINE_string("new_word", None,
 flags.DEFINE_string("vocab_file_path", "raw_data/ptb.train.txt",
                     "File from which to build the model vocabulary.")
 flags.DEFINE_string("save_path", None,
-                    "Model output directory.")
+                    "Output directory.")
 flags.DEFINE_string("result_log_file", "results_log.csv",
                     "File in save_path directory to write results log to.")
 flags.DEFINE_bool("use_fp16", False,
@@ -93,6 +93,7 @@ flags.DEFINE_bool("use_fp16", False,
 flags.DEFINE_integer("num_word_train_sentences", 1,
 		 "Number of training sentences given for word")
 flags.DEFINE_bool("reload_pre", False, "Reload pre-trained network.")
+flags.DEFINE_string("model_save_path", None, "model directory to save to or load from")
 flags.DEFINE_string("approach", "opt", "centroid, opt, opt_zero, or opt_centroid")
 
 FLAGS = flags.FLAGS
@@ -465,17 +466,15 @@ def main(_):
 	  valid_perplexity = run_epoch(session, mvalid)
 	  print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
-	if FLAGS.save_path:
-	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
+	if FLAGS.model_save_path:
+	  curr_save_path = FLAGS.model_save_path + "/pre_fine/"
 	  if not os.path.isdir(curr_save_path):
 	      os.makedirs(curr_save_path)
 	  print("Saving model to %s." % curr_save_path)
 	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
 
       else:  # FLAGS.reload_pre
-	curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
-	if not os.path.isdir(curr_save_path):
-	    os.makedirs(curr_save_path)
+	curr_save_path = FLAGS.model_save_path + "/pre_fine/"
 	print("Loading model from %s." % curr_save_path)
 	sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
 	print("Successfully restored model.")
@@ -514,12 +513,6 @@ def main(_):
 	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 
-#	if FLAGS.save_path:
-#	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
-#	  if not os.path.isdir(curr_save_path):
-#	      os.makedirs(curr_save_path)
-#	  print("Saving model to %s." % curr_save_path)
-#	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
       elif FLAGS.approach == "centroid":  # FLAGS.centroid_approach
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
