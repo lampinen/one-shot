@@ -492,12 +492,12 @@ def main(_):
 	curr_embedding = session.run(mwordtest.embedding)[new_word_index]
 	curr_softmax_w = session.run(mwordtest.softmax_w)[:,new_word_index]
 	curr_softmax_b = session.run(mwordtest.softmax_b)[new_word_index]
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "embedding_pre.csv",  "w") as femb: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/embedding_pre.csv",  "w") as femb: 
 	  np.savetxt(femb, curr_embedding, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_pre.csv",  "w") as fsmw: 
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_w_pre.csv",  "w") as fsmw: 
 	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
-	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_pre.csv",  "w") as fsmb: 
-	  np.savetxt(fsmb, numpy.array([curr_softmax_b]), delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/softmax_b_pre.csv",  "w") as fsmb: 
+	  np.savetxt(fsmb, np.array([curr_softmax_b]), delimiter=',')
 	  
 
       # Optimize for new word.
@@ -629,7 +629,7 @@ def main(_):
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
 	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_" + FLAGS.approach + ".csv",  "w") as fsmb: 
-	  np.savetxt(fsmb, numpy.array([curr_softmax_b]), delimiter=',')
+	  np.savetxt(fsmb, np.array([curr_softmax_b]), delimiter=',')
 
       
 
