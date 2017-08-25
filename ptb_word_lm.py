@@ -85,7 +85,7 @@ flags.DEFINE_string("new_word", None,
 flags.DEFINE_string("vocab_file_path", "raw_data/ptb.train.txt",
                     "File from which to build the model vocabulary.")
 flags.DEFINE_string("save_path", None,
-                    "Model output directory.")
+                    "Output directory.")
 flags.DEFINE_string("result_log_file", "results_log.csv",
                     "File in save_path directory to write results log to.")
 flags.DEFINE_bool("use_fp16", False,
@@ -93,6 +93,9 @@ flags.DEFINE_bool("use_fp16", False,
 flags.DEFINE_integer("num_word_train_sentences", 1,
 		 "Number of training sentences given for word")
 flags.DEFINE_bool("reload_pre", False, "Reload pre-trained network.")
+flags.DEFINE_string("model_save_path", None, "model directory to save to or load from")
+flags.DEFINE_string("embedding_prefix", '',
+                    "prefix for embedding_files.")
 flags.DEFINE_string("approach", "opt", "centroid, opt, opt_zero, or opt_centroid")
 
 FLAGS = flags.FLAGS
@@ -451,7 +454,7 @@ def main(_):
         mwordtest = PTBModel(is_training=False, config=eval_config,
                          input_=word_test_input, new_word_index=new_word_index)
 
-    sv = tf.train.Supervisor(logdir=FLAGS.save_path)
+    sv = tf.train.Supervisor(logdir=FLAGS.save_path + '/tmp/')
     with sv.managed_session() as session:
       if not FLAGS.reload_pre:
 	for i in range(config.max_max_epoch):
@@ -465,33 +468,40 @@ def main(_):
 	  valid_perplexity = run_epoch(session, mvalid)
 	  print("Epoch: %d Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
-	if FLAGS.save_path:
-	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
+	if FLAGS.model_save_path:
+	  curr_save_path = FLAGS.model_save_path
 	  if not os.path.isdir(curr_save_path):
 	      os.makedirs(curr_save_path)
 	  print("Saving model to %s." % curr_save_path)
 	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
 
       else:  # FLAGS.reload_pre
-	curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/pre_fine/"
-	if not os.path.isdir(curr_save_path):
-	    os.makedirs(curr_save_path)
+	curr_save_path = FLAGS.model_save_path
 	print("Loading model from %s." % curr_save_path)
 	sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
 	print("Successfully restored model.")
 
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+#      test_perplexity = run_epoch(session, mtest)
+#      print("Test Perplexity: %.3f" % test_perplexity)
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
-	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
+#	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)[new_word_index]
+	curr_softmax_w = session.run(mwordtest.softmax_w)[:,new_word_index]
+	curr_softmax_b = session.run(mwordtest.softmax_b)[new_word_index]
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "embedding_pre.csv",  "w") as femb: 
+	  np.savetxt(femb, curr_embedding, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_pre.csv",  "w") as fsmw: 
+	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_pre.csv",  "w") as fsmb: 
+	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
+	  
 
       # Optimize for new word.
       if FLAGS.approach == "opt":
-	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 	for i in range(config.max_wordopt_epoch):
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
@@ -505,12 +515,6 @@ def main(_):
 	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 
-#	if FLAGS.save_path:
-#	  curr_save_path = FLAGS.save_path + "/" + FLAGS.new_word +  "/post_fine/"
-#	  if not os.path.isdir(curr_save_path):
-#	      os.makedirs(curr_save_path)
-#	  print("Saving model to %s." % curr_save_path)
-#	  sv.saver.save(session, curr_save_path, global_step=sv.global_step)
       elif FLAGS.approach == "centroid":  # FLAGS.centroid_approach
 	curr_embedding = session.run(mwordtest.embedding)
 	curr_softmax_w = session.run(mwordtest.softmax_w)
@@ -609,14 +613,23 @@ def main(_):
 	
       word_test_perplexity = run_epoch(session, mwordtest)
       print("Word Test Perplexity: %.3f" % (word_test_perplexity))
-      test_perplexity = run_epoch(session, mtest)
-      print("Test Perplexity: %.3f" % test_perplexity)
+#      test_perplexity = run_epoch(session, mtest)
+#      print("Test Perplexity: %.3f" % test_perplexity)
 
 
       if FLAGS.save_path:
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
-	  flog.write("post_test_perp, %f\n" %(test_perplexity))
+#	  flog.write("post_test_perp, %f\n" %(test_perplexity))
+	curr_embedding = session.run(mwordtest.embedding)[new_word_index]
+	curr_softmax_w = session.run(mwordtest.softmax_w)[:,new_word_index]
+	curr_softmax_b = session.run(mwordtest.softmax_b)[new_word_index]
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "embedding_" + FLAGS.approach + ".csv",  "w") as femb: 
+	  np.savetxt(femb, curr_embedding, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
+	  np.savetxt(fsmw, curr_softmax_w, delimiter=',')
+	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "softmax_b_" + FLAGS.approach + ".csv",  "w") as fsmb: 
+	  np.savetxt(fsmb, curr_softmax_b, delimiter=',')
 
       
 
