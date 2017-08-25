@@ -489,9 +489,9 @@ def main(_):
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("pre_new_word_test_perp, %f\n" %(word_test_perplexity))
 #	  flog.write("pre_test_perp, %f\n" %(test_perplexity))
-	curr_embedding = session.run(mwordtest.embedding)
-	curr_softmax_w = session.run(mwordtest.softmax_w)
-	curr_softmax_b = session.run(mwordtest.softmax_b)
+	curr_embedding = session.run(mwordtest.embedding)[new_word_index]
+	curr_softmax_w = session.run(mwordtest.softmax_w)[:,new_word_index]
+	curr_softmax_b = session.run(mwordtest.softmax_b)[new_word_index]
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/" + FLAGS.embedding_prefix + "embedding_pre.csv",  "w") as femb: 
 	  np.savetxt(femb, curr_embedding, delimiter=',')
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_pre.csv",  "w") as fsmw: 
@@ -621,9 +621,9 @@ def main(_):
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.result_log_file, "a") as flog:
 	  flog.write("post_new_word_test_perp, %f\n" %(word_test_perplexity))
 #	  flog.write("post_test_perp, %f\n" %(test_perplexity))
-	curr_embedding = session.run(mwordtest.embedding)
-	curr_softmax_w = session.run(mwordtest.softmax_w)
-	curr_softmax_b = session.run(mwordtest.softmax_b)
+	curr_embedding = session.run(mwordtest.embedding)[new_word_index]
+	curr_softmax_w = session.run(mwordtest.softmax_w)[:,new_word_index]
+	curr_softmax_b = session.run(mwordtest.softmax_b)[new_word_index]
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "embedding_" + FLAGS.approach + ".csv",  "w") as femb: 
 	  np.savetxt(femb, curr_embedding, delimiter=',')
 	with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + "embedding" + "/"+ FLAGS.embedding_prefix + "softmax_w_" + FLAGS.approach + ".csv",  "w") as fsmw: 
