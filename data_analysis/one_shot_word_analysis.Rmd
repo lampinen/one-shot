@@ -1,0 +1,107 @@
+---
+title: "One Shot Word Learning Analysis"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+# Data Loading
+
+```{r}
+words = c("explained", "bonuses", "explained_2nd", "bonuses_2nd") #, "bonuses", "entry", "rice", "rolled", "marketers", "immune", "cowboys", "borrow")
+num_train = 1:10
+approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
+
+d = data.frame()
+for (word in words) {
+  for (n in num_train) {
+    for (a in approaches) {
+      filename = sprintf("../%s/%i_%s_results_log.csv", word, n, a)
+      this_d = read.csv(filename, header=F)
+      this_d = this_d %>% 
+        spread(V1, V2) %>%
+        mutate(new_word=word, num_train=n, approach=a)
+      d = rbind(d, this_d)
+      
+    }
+  }
+}
+```
+
+# Data manipulation
+```{r}
+d = d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, ptb_test_delta=post_test_perp - pre_test_perp)
+```
+
+# Centroid vs. optimizing
+
+```{r, warning=F, message=F}
+ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
+  geom_line() +
+  facet_wrap(~ new_word) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  ylab("Change in perplexity on new word dataset") +
+  theme_bw()
+```
+
+```{r}
+#ggsave('../results/first_run_bonuses_vs_explained.png')
+```
+
+# Better comparison: 10 perms w/ fixed test
+
+```{r}
+
+```
+
+
+```{r}
+words = c("explained", "bonuses") 
+num_train = 1:10
+approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
+
+d = data.frame()
+for (word in words) {
+  for (perm in 1:3) {
+    for (n in num_train) {
+      for (a in approaches) {
+        filename = sprintf("../result_data/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
+        this_d = read.csv(filename, header=F)
+        this_d = this_d %>% 
+          spread(V1, V2) %>%
+          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+        d = rbind(d, this_d)
+        
+      }
+    }
+  }
+}
+```
+
+# Data manipulation
+```{r}
+d = d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, perm=factor(perm)) #, ptb_test_delta=post_test_perp - pre_test_perp)
+```
+
+```{r}
+avg_d = d %>% group_by(num_train, approach, new_word) %>% summarize(nw_delta = mean(nw_delta))
+```
+
+# Approach comparisons
+
+```{r, echo=FALSE, message=F}
+ggplot() +
+  geom_line(data=avg_d, aes(x=num_train, y=nw_delta, color=approach)) +
+  geom_line(data=d, aes(x=num_train,y=nw_delta, color=approach, group=interaction(approach, perm)), alpha=0.3) +
+  facet_wrap(~ new_word) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  ylab("Change in perplexity on new word dataset") +
+  theme_bw()
+```
