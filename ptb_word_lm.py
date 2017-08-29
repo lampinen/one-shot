@@ -502,7 +502,6 @@ def main(_):
 
       # Optimize for new word.
       if FLAGS.approach == "opt":
-	print(curr_embedding[new_word_index])
 	for i in range(config.max_wordopt_epoch):
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
 	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
