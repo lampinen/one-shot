@@ -58,7 +58,7 @@ ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
 
 
 ```{r}
-words = c("explained", "bonuses") 
+words = c("explained", "bonuses", "strategist") 
 num_train = 1:10
 perms = 1:10
 approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
@@ -99,9 +99,10 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 ```
 
 ```{r}
-withword_d = withword_d[rep(1:2, each=10),]
+number_of_new_words = length(words)
+withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, 2),approach='train with word') %>%
+  mutate(num_train=rep(1:10, number_of_new_words),approach='train with word') %>%
   select(num_train, approach, new_word, nw_delta)
 avg_d = d %>% 
   group_by(num_train, approach, new_word) %>% 
@@ -237,3 +238,66 @@ ggsave('../results/smw_distances_violin.png')
 
 
 
+# Optimizing only input or output embeddings
+
+```{r}
+words = c("explained", "bonuses", "strategist") 
+num_train = c(1, 10)
+perms = 1:10
+approaches = c("opt_centroid", "centroid")
+skips = c("emb","sm")
+
+skip_d = data.frame()
+for (word in words) {
+  for (perm in perms) {
+    for (skipping in skips) {
+      for (n in num_train) {
+        for (a in approaches) {
+          filename = sprintf("../result_data/%s_perm%i_skipping_%s_train_logs/%s/%i_%s_results_log.csv", word, perm, skipping, word, n, a)
+          this_d = read.csv(filename, header=F)
+          this_d = this_d %>% 
+            spread(V1, V2) %>%
+            mutate(new_word=word, perm=perm, num_train=n, approach=a, skipping=skipping)
+          skip_d = rbind(skip_d, this_d)
+        }
+      }
+    }
+  }
+}
+```
+
+```{r}
+skip_d = skip_d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp,
+                           perm=factor(perm),
+                           optimizing=ifelse(skipping=="None", "both", ifelse(skipping == "sm", "emb", "sm"))) 
+```
+
+```{r}
+# combine with subset of full training data that matches
+filtered_d = d %>% 
+  filter(num_train %in% c(1, 10), 
+         approach %in% approaches) %>%
+  mutate(skipping='None', optimizing='both')
+skip_d = rbind(filtered_d, skip_d)
+```
+
+```{r}
+avg_skip_d = skip_d %>% 
+  group_by(num_train, approach, new_word, optimizing) %>% 
+  summarize(nw_delta = mean(nw_delta)) %>% 
+  ungroup()
+```
+
+# Approach comparisons
+
+```{r, echo=FALSE, message=F}
+ggplot() +
+  geom_bar(data=avg_skip_d, aes(x=num_train, y=nw_delta, fill=optimizing), stat="identity", position="dodge") +
+#  geom_point(data=skip_d, aes(x=num_train,y=nw_delta, color=optimizing, group=interaction(approach, perm)), alpha=0.15) +
+  facet_grid(approach ~ new_word) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  scale_fill_brewer(palette='Dark2') +
+  ylab("Change in perplexity on new word dataset") +
+  theme_bw()
+```
