@@ -97,6 +97,8 @@ flags.DEFINE_string("model_save_path", None, "model directory to save to or load
 flags.DEFINE_string("embedding_prefix", '',
                     "prefix for embedding_files.")
 flags.DEFINE_string("approach", "opt", "centroid, opt, opt_zero, or opt_centroid")
+flags.DEFINE_bool("skip_emb_update", False, "Doesn't optimize embedding for new word")
+flags.DEFINE_bool("skip_sm_update", False, "Doesn't optimize softmax weights and bias for new word.")
 
 FLAGS = flags.FLAGS
 
@@ -220,7 +222,7 @@ class PTBModel(object):
     word_selection_onehot = tf.expand_dims(tf.one_hot(new_word_index, vocab_size), axis=1)
 
     wordopt_loss = loss + config.wordopt_reg_weight * tf.nn.l2_loss(embedding)
-    embedding_vars = [v for v in tf.trainable_variables() if "embedding" in v.name or "softmax_" in v.name]
+    embedding_vars = [v for v in tf.trainable_variables() if ("embedding" in v.name and not FLAGS.skip_emb_update) or ("softmax_" in v.name and not FLAGS.skip_sm_update)]
     embedding_optimizer = tf.train.GradientDescentOptimizer(self._lr) 
     word_grads_and_vars = embedding_optimizer.compute_gradients(
 	wordopt_loss, var_list=embedding_vars)
@@ -241,11 +243,19 @@ class PTBModel(object):
     # Assign ops and phs for centroid, opt_centroid, and opt_zero approaches
     if FLAGS.approach != "opt":
       self.embedding_assign_ph = tf.placeholder(tf.float32, shape=embedding.get_shape())
-      self.embedding_assign_op = tf.assign(embedding, self.embedding_assign_ph)
+      if FLAGS.skip_emb_update:
+	self.embedding_assign_op = tf.no_op()
+      else:
+	self.embedding_assign_op = tf.assign(embedding, self.embedding_assign_ph)
+
       self.softmax_w_assign_ph = tf.placeholder(tf.float32, shape=softmax_w.get_shape())
-      self.softmax_w_assign_op = tf.assign(softmax_w, self.softmax_w_assign_ph)
       self.softmax_b_assign_ph = tf.placeholder(tf.float32, shape=softmax_b.get_shape())
-      self.softmax_b_assign_op = tf.assign(softmax_b, self.softmax_b_assign_ph)
+      if FLAGS.skip_sm_update: 
+	self.softmax_w_assign_op = tf.no_op()
+	self.softmax_b_assign_op = tf.no_op()
+      else:
+	self.softmax_w_assign_op = tf.assign(softmax_w, self.softmax_w_assign_ph)
+	self.softmax_b_assign_op = tf.assign(softmax_b, self.softmax_b_assign_ph)
 
   def assign_lr(self, session, lr_value):
     session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
@@ -374,7 +384,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     costs += cost
     iters += model.input.num_steps
 
-    if verbose and step % (model.input.epoch_size // 10) == 10:
+    if verbose and ((model.input.epoch_size // 10) == 0 or step % (model.input.epoch_size // 10) == 10):
       print("%.3f perplexity: %.3f speed: %.0f wps" %
             (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
              iters * model.input.batch_size / (time.time() - start_time)))
