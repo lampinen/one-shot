@@ -58,7 +58,7 @@ library(stringr)
 
 
 ```{r}
-words = c("explained", "bonuses", "strategist") 
+words = c("explained", "bonuses", "strategist", "marketers") 
 num_train = 1:10
 perms = 1:10
 approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
@@ -303,6 +303,10 @@ ggplot() +
 ```
 
 ```{r}
+ggsave('../results/skipping_by_word.png', width=10, height=5)
+```
+
+```{r}
 noword_avg_skip_d = skip_d %>% 
   group_by(num_train, approach, optimizing) %>% 
   summarize(nw_delta = mean(nw_delta)) %>% 
@@ -318,5 +322,9 @@ ggplot() +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
   theme_bw()
+```
+
+```{r}
+ggsave('../results/skipping_summarized.png')
 ```
 
