@@ -13,41 +13,41 @@ library(stringr)
 # Data Loading
 
 ```{r}
-words = c("explained", "bonuses", "explained_2nd", "bonuses_2nd") #, "bonuses", "entry", "rice", "rolled", "marketers", "immune", "cowboys", "borrow")
-num_train = 1:10
-approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
+#words = c("explained", "bonuses", "explained_2nd", "bonuses_2nd") #, "bonuses", "entry", "rice", "rolled", "marketers", "immune", "cowboys", "borrow")
+#num_train = 1:10
+#approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
 
-d = data.frame()
-for (word in words) {
-  for (n in num_train) {
-    for (a in approaches) {
-      filename = sprintf("../%s/%i_%s_results_log.csv", word, n, a)
-      this_d = read.csv(filename, header=F)
-      this_d = this_d %>% 
-        spread(V1, V2) %>%
-        mutate(new_word=word, num_train=n, approach=a)
-      d = rbind(d, this_d)
-      
-    }
-  }
-}
+#d = data.frame()
+#for (word in words) {
+#  for (n in num_train) {
+#    for (a in approaches) {
+#      filename = sprintf("../%s/%i_%s_results_log.csv", word, n, a)
+#      this_d = read.csv(filename, header=F)
+#      this_d = this_d %>% 
+#        spread(V1, V2) %>%
+#        mutate(new_word=word, num_train=n, approach=a)
+#      d = rbind(d, this_d)
+#      
+#    }
+#  }
+#}
 ```
 
 # Data manipulation
 ```{r}
-d = d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, ptb_test_delta=post_test_perp - pre_test_perp)
+#d = d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, ptb_test_delta=post_test_perp - pre_test_perp)
 ```
 
 # Centroid vs. optimizing
 
 ```{r, warning=F, message=F}
-ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
-  geom_line() +
-  facet_wrap(~ new_word) +
-  xlab("Number of training sentences") +
-  scale_x_continuous(breaks=1:10) +
-  ylab("Change in perplexity on new word dataset") +
-  theme_bw()
+#ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
+#  geom_line() +
+#  facet_wrap(~ new_word) +
+#  xlab("Number of training sentences") +
+#  scale_x_continuous(breaks=1:10) +
+#  ylab("Change in perplexity on new word dataset") +
+#  theme_bw()
 ```
 
 ```{r}
@@ -58,7 +58,7 @@ ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
 
 
 ```{r}
-words = c("explained", "bonuses", "strategist") 
+words = c("explained", "bonuses", "strategist", "marketers") 
 num_train = 1:10
 perms = 1:10
 approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
@@ -241,7 +241,7 @@ ggsave('../results/smw_distances_violin.png')
 # Optimizing only input or output embeddings
 
 ```{r}
-words = c("explained", "bonuses", "strategist") 
+words = c("explained", "bonuses", "strategist", "marketers") 
 num_train = c(1, 10)
 perms = 1:10
 approaches = c("opt_centroid", "centroid")
@@ -292,12 +292,39 @@ avg_skip_d = skip_d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_bar(data=avg_skip_d, aes(x=num_train, y=nw_delta, fill=optimizing), stat="identity", position="dodge") +
-#  geom_point(data=skip_d, aes(x=num_train,y=nw_delta, color=optimizing, group=interaction(approach, perm)), alpha=0.15) +
+  geom_line(data=avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing)) +
+  geom_line(data=skip_d, aes(x=num_train, y=nw_delta, color=optimizing, group=interaction(optimizing, perm)), alpha=0.15) +
   facet_grid(approach ~ new_word) +
   xlab("Number of training sentences") +
-  scale_x_continuous(breaks=1:10) +
+  scale_x_continuous(breaks=10) +
   scale_fill_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
   theme_bw()
 ```
+
+```{r}
+ggsave('../results/skipping_by_word.png', width=10, height=5)
+```
+
+```{r}
+noword_avg_skip_d = skip_d %>% 
+  group_by(num_train, approach, optimizing) %>% 
+  summarize(nw_delta = mean(nw_delta)) %>% 
+  ungroup()
+```
+
+```{r}
+ggplot() +
+  geom_line(data=noword_avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing)) +
+  facet_grid(~ approach) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=10) +
+  scale_color_brewer(palette='Dark2') +
+  ylab("Change in perplexity on new word dataset") +
+  theme_bw()
+```
+
+```{r}
+ggsave('../results/skipping_summarized.png')
+```
+
