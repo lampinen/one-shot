@@ -70,16 +70,22 @@ for (word in words) {
     for (n in num_train) {
       for (a in approaches) {
         filename = sprintf("../result_data/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
+        if (!file.exists(filename)) {
+          next
+        }
         this_d = read.csv(filename, header=F)
         this_d = this_d %>% 
           spread(V1, V2) %>%
           mutate(new_word=word, perm=perm, num_train=n, approach=a)
-        d = rbind(d, this_d)
+        d = bind_rows(d, this_d)
         
       }
     }
   }
   filename = sprintf("../result_data/%s_withword_train_logs/%s/_results_log.csv", word, word)
+  if (!file.exists(filename)) {
+    next
+  }
   this_d2 = read.csv(filename, header=F)
   this_d2 = this_d2 %>% 
     spread(V1, V2) %>%
@@ -87,7 +93,7 @@ for (word in words) {
     select(-post_new_word_test_perp) %>%
     rename(post_withword_test_perp = pre_new_word_test_perp) %>%
     mutate(withoutword_test_perp=head(this_d$pre_new_word_test_perp, n=1))
-  withword_d = rbind(withword_d, this_d2)
+  withword_d = bind_rows(withword_d, this_d2)
 }
 
 ```
@@ -117,12 +123,13 @@ avg_d = d %>%
 ggplot() +
   geom_line(data=avg_d, aes(x=num_train, y=nw_delta, color=approach)) +
   geom_line(data=d, aes(x=num_train,y=nw_delta, color=approach, group=interaction(approach, perm)), alpha=0.15) +
-  facet_wrap(~ new_word) +
+  facet_wrap(~ new_word, scales='free') +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
-  theme_bw()
+  theme_bw(base_size=12) +
+  theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 ```{r}
 ggsave('../results/10perms_delta_perplexity.png')
@@ -254,11 +261,14 @@ for (word in words) {
       for (n in num_train) {
         for (a in approaches) {
           filename = sprintf("../result_data/%s_perm%i_skipping_%s_train_logs/%s/%i_%s_results_log.csv", word, perm, skipping, word, n, a)
+          if (!file.exists(filename)){
+            next
+          }
           this_d = read.csv(filename, header=F)
           this_d = this_d %>% 
             spread(V1, V2) %>%
             mutate(new_word=word, perm=perm, num_train=n, approach=a, skipping=skipping)
-          skip_d = rbind(skip_d, this_d)
+          skip_d = bind_rows(skip_d, this_d)
         }
       }
     }
@@ -299,7 +309,7 @@ ggplot() +
   scale_x_continuous(breaks=10) +
   scale_fill_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
-  theme_bw()
+  theme_bw(base_size=12)
 ```
 
 ```{r}
