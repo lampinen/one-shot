@@ -100,7 +100,11 @@ for (word in words) {
 
 # Data manipulation
 ```{r}
-d = d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, perm=factor(perm)) #, ptb_test_delta=post_test_perp - pre_test_perp)
+d = d %>% 
+  mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, perm=factor(perm), train_with_word=F) %>%
+  mutate(approach=factor(approach, 
+                         levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
+                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp)
 ```
 
@@ -108,34 +112,66 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words),approach='train with word') %>%
-  select(num_train, approach, new_word, nw_delta)
+  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training with the word', train_with_word=T) %>%
+  select(num_train, approach, new_word, nw_delta, train_with_word)
 avg_d = d %>% 
-  group_by(num_train, approach, new_word) %>% 
+  group_by(num_train, approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta)) %>% 
   ungroup() %>% 
-  rbind(., withword_d)
+  rbind(., withword_d) %>%
+  mutate(approach=factor(approach, 
+                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
+                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
 ```
 
 # Approach comparisons
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=nw_delta, color=approach)) +
-  geom_line(data=d, aes(x=num_train,y=nw_delta, color=approach, group=interaction(approach, perm)), alpha=0.15) +
+  geom_line(data=avg_d, aes(x=num_train, y=nw_delta, color=approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=nw_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word, scales='free') +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
+  guides(linetype=F) +
   theme_bw(base_size=12) +
   theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 ```{r}
-ggsave('../results/10perms_delta_perplexity.png')
+ggsave('../results/10perms_delta_perplexity.png', width=10, height=7)
 ```
 
+```{r}
+noword_withword_d = withword_d %>%
+  group_by(num_train, approach, train_with_word) %>% 
+  summarize(nw_delta = mean(nw_delta)) %>% 
+  ungroup()
+noword_d = d %>% 
+  group_by(num_train, approach, train_with_word) %>% 
+  summarize(nw_delta = mean(nw_delta)) %>% 
+  ungroup() %>%
+  bind_rows(., noword_withword_d) %>%
+  mutate(approach=factor(approach, 
+                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
+                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+```
 
+```{r, echo=FALSE, message=F}
+ggplot() +
+  geom_line(data=noword_d, aes(x=num_train, y=nw_delta, color=approach, linetype=train_with_word), size=1) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  scale_color_brewer(palette='Dark2') +
+  ylab("Change in perplexity on new word dataset") +
+  guides(linetype=F) +
+  theme_bw(base_size=12) +
+  theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
+```
+```{r}
+ggsave('../results/10perms_delta_perplexity_summarized.png', width=10, height=7)
+```
 # Embeddings
 
 
@@ -279,16 +315,25 @@ for (word in words) {
 ```{r}
 skip_d = skip_d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp,
                            perm=factor(perm),
-                           optimizing=ifelse(skipping=="None", "both", ifelse(skipping == "sm", "emb", "sm"))) 
+                           optimizing=ifelse(skipping=="None", "Both", ifelse(skipping == "sm", "Input Embedding", "Output Embedding")),
+                           approach=factor(approach, 
+                                           levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
+                                           labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
 ```
 
 ```{r}
 # combine with subset of full training data that matches
 filtered_d = d %>% 
   filter(num_train %in% c(1, 10), 
-         approach %in% approaches) %>%
-  mutate(skipping='None', optimizing='both')
+         approach %in% c("Centroid", "Optimizing from centroid")) %>%
+  mutate(skipping='None', optimizing='Both') %>%
+  select(-train_with_word)
 skip_d = rbind(filtered_d, skip_d)
+skip_d = skip_d %>%
+  mutate(optimizing=factor(optimizing, levels=c("Input Embedding", "Output Embedding", "Both"))) %>%
+  mutate(approach=factor(approach, 
+                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
+                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
 ```
 
 ```{r}
@@ -302,12 +347,12 @@ avg_skip_d = skip_d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing)) +
-  geom_line(data=skip_d, aes(x=num_train, y=nw_delta, color=optimizing, group=interaction(optimizing, perm)), alpha=0.15) +
+  geom_line(data=avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing), size=1) +
+  geom_line(data=skip_d, aes(x=num_train, y=nw_delta, color=optimizing, group=interaction(optimizing, perm)), alpha=0.25) +
   facet_grid(approach ~ new_word) +
   xlab("Number of training sentences") +
-  scale_x_continuous(breaks=10) +
-  scale_fill_brewer(palette='Dark2') +
+  scale_x_continuous(breaks=c(1,10)) +
+  scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
   theme_bw(base_size=12)
 ```
@@ -325,16 +370,16 @@ noword_avg_skip_d = skip_d %>%
 
 ```{r}
 ggplot() +
-  geom_line(data=noword_avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing)) +
+  geom_line(data=noword_avg_skip_d, aes(x=num_train, y=nw_delta, color=optimizing), size=1) +
   facet_grid(~ approach) +
   xlab("Number of training sentences") +
-  scale_x_continuous(breaks=10) +
+  scale_x_continuous(breaks=c(1,10)) +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word dataset") +
-  theme_bw()
+  theme_bw(base_size=12)
 ```
 
 ```{r}
 ggsave('../results/skipping_summarized.png')
-```
+;```
 
