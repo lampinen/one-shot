@@ -222,10 +222,13 @@ class PTBModel(object):
     word_selection_onehot = tf.expand_dims(tf.one_hot(new_word_index, vocab_size), axis=1)
 
     wordopt_loss = loss + config.wordopt_reg_weight * tf.nn.l2_loss(embedding)
-    embedding_vars = [v for v in tf.trainable_variables() if ("embedding" in v.name and not FLAGS.skip_emb_update) or ("softmax_" in v.name and not FLAGS.skip_sm_update)]
+    embedding_vars = [v for v in tf.trainable_variables() if "embedding" in v.name]
+    softmax_vars = [v for v in tf.trainable_variables() if "softmax_" in v.name]
     embedding_optimizer = tf.train.GradientDescentOptimizer(self._lr) 
-    word_grads_and_vars = embedding_optimizer.compute_gradients(
+    embedding_grads_and_vars = embedding_optimizer.compute_gradients(
 	wordopt_loss, var_list=embedding_vars)
+    softmax_grads_and_vars = embedding_optimizer.compute_gradients(
+	wordopt_loss, var_list=softmax_vars)
     # Only update target word embedding
     def _mask_grad(grad_and_var):
       grad = grad_and_var[0]
@@ -237,8 +240,17 @@ class PTBModel(object):
       else:
 	return (tf.multiply(grad, tf.transpose(word_selection_onehot)), var)
 
-    masked_word_grads_and_vars = [_mask_grad(x) for x in word_grads_and_vars]
-    self.word_train_op = embedding_optimizer.apply_gradients(masked_word_grads_and_vars)
+    masked_embedding_grads_and_vars = [_mask_grad(x) for x in embedding_grads_and_vars]
+    if FLAGS.skip_emb_update:
+      self.word_embedding_train_op = tf.no_op() 
+    else:
+      self.word_embedding_train_op = embedding_optimizer.apply_gradients(masked_embedding_grads_and_vars)
+
+    masked_softmax_grads_and_vars = [_mask_grad(x) for x in softmax_grads_and_vars]
+    if FLAGS.skip_sm_update: 
+      self.word_softmax_train_op = tf.no_op()
+    else:
+      self.word_softmax_train_op = embedding_optimizer.apply_gradients(masked_softmax_grads_and_vars)
 
     # Assign ops and phs for centroid, opt_centroid, and opt_zero approaches
     if FLAGS.approach != "opt":
@@ -327,10 +339,11 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 100
+  max_wordopt_epoch = 500
   wordopt_lr = 0.01
   wordopt_lr_decay = 1.0
   wordopt_reg_weight = 0.01
+  sm_opt_every_n_emb_steps = 5
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
@@ -353,6 +366,7 @@ class TestConfig(object):
   wordopt_lr = 0.01
   wordopt_lr_decay = 0.99
   wordopt_reg_weight = 0.05
+  sm_opt_every_n_emb_steps = 10
   batch_size = 20
   vocab_size = 10000
 
@@ -455,7 +469,7 @@ def main(_):
       word_train_input = PTBInput(config=word_train_config, data=word_train_data, name="WordOptInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
         mwordtrain = PTBModel(is_training=True, config=word_train_config, input_=word_train_input, new_word_index=new_word_index)
-      tf.summary.scalar("Word Train Loss", mwordtrain.cost)
+      tf.summary.scalar("Emb Train Loss", mwordtrain.cost)
       tf.summary.scalar("Learning Rate", mwordtrain.lr)
 
     with tf.name_scope("WordOptTest"):
@@ -511,16 +525,24 @@ def main(_):
 	  
 
       # Optimize for new word.
-      if FLAGS.approach == "opt":
-	for i in range(config.max_wordopt_epoch):
+      def _word_optimize(skip_emb_update=FLAGS.skip_emb_update, skip_sm_update=FLAGS.skip_sm_update):
+	if skip_emb_update:
+	  epochs_to_run = range(0, config.max_wordopt_epoch, config.sm_opt_every_n_emb_steps) 
+	else:
+	  epochs_to_run = range(config.max_wordopt_epoch) 
+	for i in epochs_to_run:
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
 	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
 	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
-				       verbose=True)
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_embedding_train_op, verbose=True)
+	  if i % config.sm_opt_every_n_emb_steps == 0:
+	    word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_softmax_train_op, verbose=True)
 	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
 	  word_test_perplexity = run_epoch(session, mwordtest)
 	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+
+      if FLAGS.approach == "opt":
+	_word_optimize()
 	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 
@@ -578,17 +600,7 @@ def main(_):
 	session.run(mwordtrain.softmax_w_assign_op, feed_dict={mwordtrain.softmax_w_assign_ph: curr_softmax_w})
 	session.run(mwordtrain.softmax_b_assign_op, feed_dict={mwordtrain.softmax_b_assign_ph: curr_softmax_b})
 	print("Centroid-based embedding for new word assigned, optimizing...")
-	curr_embedding = session.run(mwordtest.embedding)
-	print(curr_embedding[new_word_index])
-	for i in range(config.max_wordopt_epoch):
-	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
-	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
-				       verbose=True)
-	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
-	  word_test_perplexity = run_epoch(session, mwordtest)
-	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	_word_optimize()
 	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
       elif FLAGS.approach == "opt_zero":  # optimize starting from zero vector
@@ -606,17 +618,7 @@ def main(_):
 	session.run(mwordtrain.softmax_w_assign_op, feed_dict={mwordtrain.softmax_w_assign_ph: curr_softmax_w})
 	session.run(mwordtrain.softmax_b_assign_op, feed_dict={mwordtrain.softmax_b_assign_ph: curr_softmax_b})
 	print("Centroid-based embedding for new word assigned, optimizing...")
-	curr_embedding = session.run(mwordtest.embedding)
-	print(curr_embedding[new_word_index])
-	for i in range(config.max_wordopt_epoch):
-	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
-	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
-	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_train_op,
-				       verbose=True)
-	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
-	  word_test_perplexity = run_epoch(session, mwordtest)
-	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	_word_optimize()
 	curr_embedding = session.run(mwordtest.embedding)
 	print(curr_embedding[new_word_index])
 	
