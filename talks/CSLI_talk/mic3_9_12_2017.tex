@@ -82,7 +82,7 @@
 \frame{\titlepage}
 
 \begin{frame}{One-shot word learning}
-\begin{columns}
+\begin{columns}<2>
 \begin{column}{0.5\textwidth}
 \textit{’Twas brillig, and the slithy toves}\\
 \textit{Did gyre and gimble in the wabe:}\\ 
@@ -105,11 +105,8 @@
 \end{frame}
 
 \begin{frame}{Introduction}
-One-shot learning of word embeddings? 
 \begin{itemize}
-    \item<2-> Word-embedding based systems are achieving quite good performance on some tasks. 
-    \item<3-> But humans can learn fast.
-    \item<4-> Can CLS resolve this?
+    \item<1-> Can word-embeddings systems do one-shot learning of word meanings? 
 \end{itemize}
 \end{frame}
 
@@ -306,14 +303,27 @@ We'll look at this in the context of prediction:\\[11pt]
 \draw [->, shorten >= -4pt] (n26) -- (ov6);
 \draw [->, shorten >= -4pt] (n27) -- (ov7);
 
+\only<1>{
 \draw [->, shorten <= -4pt] (ov1) -- (ow1);
 \draw [->, shorten <= -4pt] (ov2) -- (ow2);
-\only<1>{\draw [->, shorten <= -4pt] (ov3) -- (ow3);}
-\only<2>{\draw [->, shorten <= -4pt, blue] (ov3) -- (ow3);}
+\draw [->, shorten <= -4pt] (ov3) -- (ow3);
 \draw [->, shorten <= -4pt] (ov4) -- (ow4);
 \draw [->, shorten <= -4pt] (ov5) -- (ow5);
 \draw [->, shorten <= -4pt] (ov6) -- (ow6);
 \draw [->, shorten <= -4pt] (ov7) -- (ow7);
+}
+
+\only<2>{
+\draw [->, blue, shorten <= -4pt] (ov1) -- (ow1);
+\draw [->, blue, shorten <= -4pt] (ov2) -- (ow2);
+\draw [->, blue, shorten <= -4pt] (ov3) -- (ow3);
+\draw [->, blue, shorten <= -4pt] (ov4) -- (ow4);
+\draw [->, blue, shorten <= -4pt] (ov5) -- (ow5);
+\draw [->, blue, shorten <= -4pt] (ov6) -- (ow6);
+\draw [->, blue, shorten <= -4pt] (ov7) -- (ow7);
+}
+
+
 \end{tikzpicture}                      
 \end{figure}
 \end{frame}
@@ -321,12 +331,12 @@ We'll look at this in the context of prediction:\\[11pt]
 \begin{frame}{Background}
 Surprisingly little work on one-shot learning of embeddings:
 \begin{itemize}
-    \item<1-> Work from Erk \& colleagues \citep{Wang2017}, which we may hear about later -- Not this kind of embeddings, but has some relation.
+    \item<1-> Work from Erk \& colleagues \citep{Wang2017}, which we will hear about later -- Not this kind of embeddings, but has some relation.
     \item<2-> \citet{Lazaridou2017} -- One-shot word learning in a multi-modal setting. 
     \begin{itemize}
 	\item<3-> Simple heuristic: set word embedding for new word to centroid of other words in the sentence.
 	\uncover<4->{\[\text{vorpal} = \frac{\text{He} + \text{took} + \text{his} + \text{sword} + \text{in} + \text{hand}}{6}\]} \vspace{-10pt}
-	\item<5-> May capture general topic of sentence, but ignores syntax, etc.
+	\item<5-> May capture general topic of sentence, but ignores syntax, etc., despite the fact that the network ``knows'' about some of these features!
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -337,7 +347,7 @@ Surprisingly little work on one-shot learning of embeddings:
     \item<1-> We already have a good way of updating weights -- backprop!
     \item<2-> In particular, \citet{Rumelhart1993} taught a network about a new input by freezing all weights in the network except the weights from the new input and optimizing for a certain output.
     \begin{itemize}
-	\item<3-> They showed that this procedure resulted in appropriate generalizations about the new input based on the network's knowledge.
+	\item<3-> They showed that this procedure resulted in appropriate generalizations about the new input based on the network's knowledge. (See also \citet{Rogers2004}.)
     \end{itemize} 
     \item<4-> Can we do the same here?
 \end{itemize}
@@ -391,7 +401,7 @@ Surprisingly little work on one-shot learning of embeddings:
     \end{itemize}
     \item<4-5, 9-> Optimizing improves with more data, whereas centroid seems saturated with a single sentence.
     %%Interim summary only
-    \only<5>{\item But where is improvement happening?}
+    \only<-5>{\item<5> But where is improvement happening?}
     %%Conclusions parts
     \item<10-> Improvement is mostly happening at output embedding, that is, predicting the new word.
     \begin{itemize}
@@ -430,13 +440,18 @@ Surprisingly little work on one-shot learning of embeddings:
 
 \begin{frame}{Future Directions}
 \begin{itemize}
-    \item<1-> Faster integration of schema-consistent knowedge?
+    \item<1-> Would this still work with a more sophisticated system doing a more complicated task?
+    \begin{itemize}
+	\item<2-> Will multi-task learning that gives the network more semantic knowledge actually help with this? 
+    \end{itemize}
+    \item<3-> CLS connections: do we see faster and more reliable integration of schema-consistent knowledge? For example, is it easier to learn words that relate directly to already known vocabulary? 
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Acknowledgements}
 Thanks to:
 \begin{itemize}
+    \item Hinrich Sch{\"u}tze.
     \item Jay McClelland and the rest of the lab.
     \item The NSF, for funding.
     \item You, for listening. 
@@ -445,8 +460,30 @@ Thanks to:
 
 \begin{frame}[allowframebreaks]
 \bibliographystyle{apalike}
-\bibliography{one_shot_words}
+{\tiny \bibliography{one_shot_words}}
+\end{frame}
+
+\appendix
+\begin{frame}{Output New Vector Distances}
+  \begin{columns}
+    \column{\dimexpr\paperwidth}
+    \begin{figure}
+    \includegraphics[width=\textwidth]{../../results/smw_distances_violin.png}
+    \end{figure}
+  \end{columns}
+\begin{figure}
+\end{figure}
 \end{frame}
 
 
+\begin{frame}{Input New Vector Distances}
+  \begin{columns}
+    \column{\dimexpr\paperwidth}
+    \begin{figure}
+    \includegraphics[width=\textwidth]{../../results/emb_distances_violin.png}
+    \end{figure}
+  \end{columns}
+\begin{figure}
+\end{figure}
+\end{frame}
 \end{document}
