@@ -104,9 +104,9 @@
 \end{columns}
 \end{frame}
 
-\begin{frame}{Introduction}
+\begin{frame}{Our question:}
 \begin{itemize}
-    \item<1-> Can word-embeddings systems do one-shot learning of word meanings? 
+    \item<1-> Can word-embedding systems do one-shot learning of word meanings? 
 \end{itemize}
 \end{frame}
 
@@ -337,6 +337,7 @@ Surprisingly little work on one-shot learning of embeddings:
 	\item<3-> Simple heuristic: set word embedding for new word to centroid of other words in the sentence.
 	\uncover<4->{\[\text{vorpal} = \frac{\text{He} + \text{took} + \text{his} + \text{sword} + \text{in} + \text{hand}}{6}\]} \vspace{-10pt}
 	\item<5-> May capture general topic of sentence, but ignores syntax, etc., despite the fact that the network ``knows'' about some of these features!
+	\item<6-> Can we do better?
     \end{itemize}
 \end{itemize}
 \end{frame}
