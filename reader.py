@@ -86,10 +86,8 @@ def ptb_raw_data(data_path=None, train_file_path=None, vocab_file_path=None, wor
   train_data = _file_to_word_ids(train_path, word_to_id)
   valid_data = _file_to_word_ids(valid_path, word_to_id)
   test_data = _file_to_word_ids(test_path, word_to_id)
-  word_train_data = _file_to_word_ids(word_train_file_path, word_to_id)
-  word_test_data = _file_to_word_ids(word_test_file_path, word_to_id)
   vocabulary = word_to_id 
-  return train_data, valid_data, test_data, word_train_data, word_test_data, vocabulary
+  return train_data, valid_data, test_data, vocabulary
 
 
 def ptb_producer(raw_data, batch_size, num_steps, name=None):
