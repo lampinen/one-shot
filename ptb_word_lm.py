@@ -422,9 +422,7 @@ def main(_):
 
   raw_data = reader.ptb_raw_data(FLAGS.data_path,
 				 FLAGS.train_file_path,
-				 FLAGS.vocab_file_path,
-				 FLAGS.word_train_file_path,
-				 FLAGS.word_test_file_path)
+				 FLAGS.vocab_file_path)
   train_data, valid_data, test_data, vocabulary = raw_data
 
   if not FLAGS.new_word:
