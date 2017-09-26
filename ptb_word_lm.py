@@ -338,7 +338,6 @@ class LargeConfig(object):
   wordopt_lr = 0.01
   wordopt_lr_decay = 1.0
   wordopt_reg_weight = 0.01
-  sm_opt_every_n_emb_steps = 1
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
@@ -506,17 +505,17 @@ def main(_):
 
       # Optimize word embeddings for a given new word.
       def _word_optimize(skip_emb_update=FLAGS.skip_emb_update, skip_sm_update=FLAGS.skip_sm_update, new_word_index=0):
-	if skip_emb_update:
-	  epochs_to_run = range(0, config.max_wordopt_epoch, config.sm_opt_every_n_emb_steps) 
-	else:
-	  epochs_to_run = range(config.max_wordopt_epoch) 
+      epochs_to_run = range(config.max_wordopt_epoch) 
 	for i in epochs_to_run:
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
 	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
 	  print("Word Opt Epoch: %d Learning rate: %f" % (i + 1, session.run(mwordtrain.lr)))
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_embedding_train_op, verbose=True, other_feed_dict_keys={mwordtrain.new_word_index: new_word_index})
-	  if i % config.sm_opt_every_n_emb_steps == 0:
-	    word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_softmax_train_op, verbose=True)
+	  ops_to_run = []
+	  if not skip_emb_update:
+	    ops_to_run.append(mwordtrain.word_embedding_train_op)
+	  if not skip_sm_update:
+	    ops_to_run.append(mwordtrain.word_softmax_train_op)
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=ops_to_run, verbose=True, other_feed_dict_keys={mwordtrain.new_word_index: new_word_index})
 	  print("Word: %d Opt. Epoch: %d Word Train Perplexity: %.3f" % (new_word_index, i + 1, word_train_perplexity))
 	  valid_perplexity = run_epoch(session, mvalid)
 	  print("Word: %d Opt, Epoch: %d, Valid Perplexity: %.3f" % (new_word_index, i + 1, valid_perplexity))
