@@ -384,7 +384,7 @@ def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words=None)
     for i, (c, h) in enumerate(model.initial_state):
       feed_dict[c] = state[i].c
       feed_dict[h] = state[i].h
-    if num_vocab_words_to_select is not None:
+    if num_vocab_words is not None:
       # Work on random word this time
       feed_dict.update({mwordtrain.new_word_index: np.random.randint(num_vocab_words)})
 
