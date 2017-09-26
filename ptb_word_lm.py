@@ -425,10 +425,6 @@ def main(_):
 				 FLAGS.vocab_file_path)
   train_data, valid_data, test_data, vocabulary = raw_data
 
-  if not FLAGS.new_word:
-    raise ValueError("Must set --new_word to the new word to be learned")
-  new_word_index = vocabulary[FLAGS.new_word]
-
   config = get_config()
   eval_config = get_config()
   eval_config.batch_size = 1
@@ -442,14 +438,14 @@ def main(_):
     with tf.name_scope("Train"):
       train_input = PTBInput(config=config, data=train_data, name="TrainInput")
       with tf.variable_scope("Model", reuse=None, initializer=initializer):
-        m = PTBModel(is_training=True, config=config, input_=train_input, new_word_index=new_word_index)
+        m = PTBModel(is_training=True, config=config, input_=train_input)
       tf.summary.scalar("Training Loss", m.cost)
       tf.summary.scalar("Learning Rate", m.lr)
 
     with tf.name_scope("Valid"):
       valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        mvalid = PTBModel(is_training=False, config=config, input_=valid_input, new_word_index=new_word_index)
+        mvalid = PTBModel(is_training=False, config=config, input_=valid_input)
       tf.summary.scalar("Validation Loss", mvalid.cost)
 
     with tf.name_scope("Test"):
