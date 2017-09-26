@@ -334,7 +334,7 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 1
+  max_wordopt_epoch = 100
   wordopt_lr = 0.01
   wordopt_lr_decay = 1.0
   wordopt_reg_weight = 0.01
@@ -365,7 +365,7 @@ class TestConfig(object):
   vocab_size = 10000
 
 
-def run_epoch(session, model, eval_op=None, verbose=False, other_feed_dict_keys=None):
+def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words):
   """Runs the model on the given data."""
   start_time = time.time()
   costs = 0.0
@@ -384,8 +384,9 @@ def run_epoch(session, model, eval_op=None, verbose=False, other_feed_dict_keys=
     for i, (c, h) in enumerate(model.initial_state):
       feed_dict[c] = state[i].c
       feed_dict[h] = state[i].h
-    if other_feed_dict_keys is not None:
-      feed_dict.update(other_feed_dict_keys)
+    if num_vocab_words_to_select is not None:
+      # Work on random word this time
+      feed_dict.update({mwordtrain.new_word_index: np.random.randint(num_vocab_words)})
 
     vals = session.run(fetches, feed_dict)
     cost = vals["cost"]
@@ -504,7 +505,7 @@ def main(_):
 	  
 
       # Optimize word embeddings for a given new word.
-      def _word_optimize(skip_emb_update=FLAGS.skip_emb_update, skip_sm_update=FLAGS.skip_sm_update, new_word_index=0):
+      def _word_optimize(skip_emb_update=FLAGS.skip_emb_update, skip_sm_update=FLAGS.skip_sm_update, num_vocab_words=len(vocabulary)):
 	epochs_to_run = range(config.max_wordopt_epoch) 
 	for i in epochs_to_run:
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
@@ -515,14 +516,15 @@ def main(_):
 	    ops_to_run.append(mwordtrain.word_embedding_train_op)
 	  if not skip_sm_update:
 	    ops_to_run.append(mwordtrain.word_softmax_train_op)
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=ops_to_run, verbose=True, other_feed_dict_keys={mwordtrain.new_word_index: new_word_index})
-	  print("Word: %d Opt. Epoch: %d Word Train Perplexity: %.3f" % (new_word_index, i + 1, word_train_perplexity))
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=ops_to_run, verbose=True, num_vocab_words=num_vocab_words)
+	  print("Word Opt. Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
 	  valid_perplexity = run_epoch(session, mvalid)
-	  print("Word: %d Opt, Epoch: %d, Valid Perplexity: %.3f" % (new_word_index, i + 1, valid_perplexity))
+	  print("Word Opt, Epoch: %d, Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
 
 
-      for new_word_i in xrange(len(vocabulary)):
-	_word_optimize(new_word_index=new_word_i)
+      for epoch_i in xrange(config.max_wordopt_epoch):
+	print("Epoch %i" % epoch_i)
+	_word_optimize(num_vocab_words=len(vocabulary))
 	
       test_perplexity = run_epoch(session, mtest)
       print("Test Perplexity: %.3f" % test_perplexity)
