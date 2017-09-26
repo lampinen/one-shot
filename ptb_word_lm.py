@@ -365,7 +365,7 @@ class TestConfig(object):
   vocab_size = 10000
 
 
-def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words):
+def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words=None):
   """Runs the model on the given data."""
   start_time = time.time()
   costs = 0.0
