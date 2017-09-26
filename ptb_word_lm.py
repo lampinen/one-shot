@@ -334,11 +334,11 @@ class LargeConfig(object):
   hidden_size = 1500
   max_epoch = 14
   max_max_epoch = 55
-  max_wordopt_epoch = 500
+  max_wordopt_epoch = 1
   wordopt_lr = 0.01
   wordopt_lr_decay = 1.0
   wordopt_reg_weight = 0.01
-  sm_opt_every_n_emb_steps = 5
+  sm_opt_every_n_emb_steps = 1
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
@@ -523,9 +523,9 @@ def main(_):
 	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_embedding_train_op, verbose=True, other_feed_dict_keys={mwordtrain.new_word_index: new_word_index})
 	  if i % config.sm_opt_every_n_emb_steps == 0:
 	    word_train_perplexity = run_epoch(session, mwordtrain, eval_op=mwordtrain.word_softmax_train_op, verbose=True)
-	  print("Word Opt Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
-	  word_test_perplexity = run_epoch(session, mwordtest)
-	  print("Word Opt Epoch: %d Word Test Perplexity: %.3f" % (i + 1, word_test_perplexity))
+	  print("Word: %d Opt. Epoch: %d Word Train Perplexity: %.3f" % (new_word_index, i + 1, word_train_perplexity))
+	  valid_perplexity = run_epoch(session, mvalid)
+	  print("Word: %d Opt, Epoch: %d, Valid Perplexity: %.3f" % (new_word_index, i + 1, valid_perplexity))
 
 
       for new_word_i in xrange(len(vocabulary)):
