@@ -365,7 +365,7 @@ class TestConfig(object):
   vocab_size = 10000
 
 
-def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words=None):
+def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words=None, feed_dict_key=None):
   """Runs the model on the given data."""
   start_time = time.time()
   costs = 0.0
@@ -384,9 +384,9 @@ def run_epoch(session, model, eval_op=None, verbose=False, num_vocab_words=None)
     for i, (c, h) in enumerate(model.initial_state):
       feed_dict[c] = state[i].c
       feed_dict[h] = state[i].h
-    if num_vocab_words is not None:
+    if num_vocab_words is not None and feed_dict_key is not None:
       # Work on random word this time
-      feed_dict.update({mwordtrain.new_word_index: np.random.randint(num_vocab_words)})
+      feed_dict.update({feed_dict_key: np.random.randint(num_vocab_words)})
 
     vals = session.run(fetches, feed_dict)
     cost = vals["cost"]
@@ -516,7 +516,7 @@ def main(_):
 	    ops_to_run.append(mwordtrain.word_embedding_train_op)
 	  if not skip_sm_update:
 	    ops_to_run.append(mwordtrain.word_softmax_train_op)
-	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=ops_to_run, verbose=True, num_vocab_words=num_vocab_words)
+	  word_train_perplexity = run_epoch(session, mwordtrain, eval_op=ops_to_run, verbose=True, num_vocab_words=num_vocab_words, feed_dict_key=mwordtrain.new_word_index)
 	  print("Word Opt. Epoch: %d Word Train Perplexity: %.3f" % (i + 1, word_train_perplexity))
 	  valid_perplexity = run_epoch(session, mvalid)
 	  print("Word Opt, Epoch: %d, Valid Perplexity: %.3f" % (i + 1, valid_perplexity))
