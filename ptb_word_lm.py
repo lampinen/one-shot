@@ -505,7 +505,7 @@ def main(_):
 
       # Optimize word embeddings for a given new word.
       def _word_optimize(skip_emb_update=FLAGS.skip_emb_update, skip_sm_update=FLAGS.skip_sm_update, new_word_index=0):
-      epochs_to_run = range(config.max_wordopt_epoch) 
+	epochs_to_run = range(config.max_wordopt_epoch) 
 	for i in epochs_to_run:
 	  lr_decay = config.wordopt_lr_decay ** max(i + 1 - config.max_epoch, 0.0)
 	  mwordtrain.assign_lr(session, config.wordopt_lr * lr_decay)
