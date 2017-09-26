@@ -452,12 +452,12 @@ def main(_):
       test_input = PTBInput(config=eval_config, data=test_data, name="TestInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
         mtest = PTBModel(is_training=False, config=eval_config,
-                         input_=test_input, new_word_index=new_word_index)
+                         input_=test_input)
 
     with tf.name_scope("WordOptTrain"):
       word_train_input = PTBInput(config=word_train_config, data=train_data, name="WordOptInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        mwordtrain = PTBModel(is_training=True, config=word_train_config, input_=word_train_input, new_word_index=new_word_index)
+        mwordtrain = PTBModel(is_training=True, config=word_train_config, input_=word_train_input)
       tf.summary.scalar("Emb Train Loss", mwordtrain.cost)
       tf.summary.scalar("Learning Rate", mwordtrain.lr)
 
