@@ -76,12 +76,6 @@ flags.DEFINE_string("data_path", None,
                     "Where the training/test data is stored.")
 flags.DEFINE_string("train_file_path", None,
                     "Used to overwrite the path to the train_file.")
-flags.DEFINE_string("word_train_file_path", None,
-                    "Path to train file for word.")
-flags.DEFINE_string("word_test_file_path", None,
-                    "Path to train file for word.")
-flags.DEFINE_string("new_word", None,
-                    "New word to learn.")
 flags.DEFINE_string("vocab_file_path", "raw_data/ptb.train.txt",
                     "File from which to build the model vocabulary.")
 flags.DEFINE_string("save_path", None,
