@@ -335,9 +335,9 @@ class LargeConfig(object):
   max_epoch = 14
   max_max_epoch = 55
   max_wordopt_epoch = 100
-  wordopt_lr = 0.01
+  wordopt_lr = 0.001
   wordopt_lr_decay = 1.0
-  wordopt_reg_weight = 0.01
+  wordopt_reg_weight = 0.0
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
