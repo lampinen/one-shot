@@ -2,7 +2,7 @@ from collections import Counter
 from numpy import random
 
 data_file = "raw_data/ptb.train.txt"
-output_dir = "edited_data/"
+output_dir = "edited_data"
 output_file_prefix = "ptb.train."
 
 latin_square_10 = [[0, 1, 9, 2, 8, 3, 7, 4, 6, 5],
@@ -111,6 +111,11 @@ def create_many_many_splits_for_target_word(word):
 #create_many_splits_for_target_word("borrow")
 
 
-create_many_many_splits_for_target_word("bonuses")
-create_many_many_splits_for_target_word("explained")
-create_many_many_splits_for_target_word("strategist")
+#create_many_many_splits_for_target_word("bonuses")
+#create_many_many_splits_for_target_word("explained")
+#create_many_many_splits_for_target_word("strategist")
+#create_many_many_splits_for_target_word("marketers")
+#create_many_many_splits_for_target_word("rice")
+#create_many_many_splits_for_target_word("immune")
+#create_many_many_splits_for_target_word("borrow")
+create_many_many_splits_for_target_word("cowboys")
