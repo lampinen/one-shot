@@ -21,7 +21,7 @@
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 
-\title{The Jabberwocky: One-shot and few-shot learning of word embeddings}
+\title{Jabberwocky: One-shot and few-shot learning of word embeddings}
 
 \author{
   Andrew K. Lampinen\\
@@ -42,9 +42,38 @@
 \maketitle
 
 \begin{abstract}
-Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about its semantics, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we suggest a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could be used for allowing machine learning systems to learn continually from new words they encounter. 
+Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we suggest a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could allow machine learning systems to learn continually from new words they encounter, and could also provide a model for human rapid word learning. 
 \end{abstract}
 
 \section{Introduction}
+Humans are often able to infer approximate meanings of new words from context. For example, consider the following stanza from the poem ``Jabberwocky'' by Lewis Carroll: 
+\begin{quote}
+\centering
+\textit{
+He took his vorpal sword in hand:\\
+Long time the manxome foe he sought—\\
+So rested he by the Tumtum tree,\\
+And stood awhile in thought.}
+\end{quote}
+Despite the fact that there are several nonsense words, we can follow the narrative of the poem and understand approximately what many of the words mean by how they relate other words. This a vital skill for interacting with the world -- we constantly need to learn new words and ideas. More generally, humans are often able to gracefully accomodate situations that differ radically from what they have seen before.\par 
+By contrast, standard deep learning systems require much more data than humans to learn a concept or task, and sometimes generalize poorly \cite{Lake2016}. How can deep learning systems build on their prior knowledge to learn effectively from a few pieces of information? In this paper, we explore this issue in the specific context of creating a useful representation for a new word based on its context. \par
+\subsection{Background}
+Continuous representations of words have proven to be very effective in recent years \cite[e.g.]{Mikolov2013, Pennington2014}. These approaches represent words as vectors in a space, which are learned from large corpuses of text data. Using these vectors, deep learning systems have achieved success on tasks ranging from natural language translation \cite[e.g.]{Wu2016} to question answering \cite[e.g.]{Santoro2017}. \par
+However, these word vectors are typically trained on very large datasets, and there has been surprisingly little prior work on how to learn embeddings for new words once the system has been trained. \citet{Cotterell2016} proposed a method for incorporating morphological information into word embeddings that allows for limited generalization to new words (e.g. generalizing to unseen conjugations of a known verb). However, this is not a general system for learning representations for new words, and requires building in rather strong structural assumptions about the language and having appropriately labelled data to exploit them. \par
+More recently \citet{Lazaridou2017} explored multi-modal word learning (similar to what children do when an adult points out a new object), and in the process suggested a simple heuristic for inferring a word vector from context: simply average together all the surrounding word vectors. This is sensible, since the surrounding words will likely occur in similar contexts. However, it ignores all syntactic information, by treating all the surrounding words identically, and it relies on the semantic information being linearly combinable between different word embeddings. Both of these factors will likely limit its performance. \par
+Is there a way we can do better? A deep learning system which has been trained to perform a language task must have learned a great deal of semantic and syntactic structure which would be useful for inferring the meaning of a new word. However, this knowledge is opaquely encoded in its weights. Is there a way we can exploit this knowledge, like humans exploit their prior knowledge when learning about a new word? \par
+\section{Approach}
+We suggest that we actually already know how to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! However, we cannot simply train the whole network to accomodate this new word, this would cause a great deal of interference with prior knowledge. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
+We take inspiration from this work to guide our approach. To learn from one sentence (or a few) containing a new word, we freeze all the weights in the network except those representing the new word (in a complex NLP system, there may be more than one such set of weights, for example often these systems have different representations for the same word on the inputs and outputs). We then use stochastic gradient descent (\(\eta = 0.01\)) to update the weights for the new word using 100 epochs of training over the sentence(s) containing it. \par
+
+\section{Results}
+
+\section{Discussion}
+
+\section{Conclusions}
+
+\section*{References}
+\bibliographystyle{apalike}
+\bibliography{one_shot_words}
 
 \end{document}
