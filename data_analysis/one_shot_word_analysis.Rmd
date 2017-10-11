@@ -136,7 +136,7 @@ ggplot() +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word test data (%)") +
   guides(linetype=F) +
-  theme_bw(base_size=12) +
+  theme_bw(base_size=13) +
   theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 ```{r}
