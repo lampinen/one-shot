@@ -429,6 +429,8 @@ def main(_):
 				 FLAGS.word_train_file_path,
 				 FLAGS.word_test_file_path)
   train_data, valid_data, test_data, word_train_data, word_test_data, vocabulary = raw_data
+#  np.savetxt('raw_data/vocabulary.csv', sorted(vocabulary.items(), key=lambda x: int(x[1])), fmt='%s', delimiter=',')
+#  exit()
 
   if not FLAGS.new_word:
     raise ValueError("Must set --new_word to the new word to be learned")
