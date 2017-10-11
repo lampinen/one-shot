@@ -20,6 +20,7 @@
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
+\usepackage{graphicx}
 
 \title{Jabberwocky: One-shot and few-shot learning of word embeddings}
 
@@ -42,7 +43,7 @@
 \maketitle
 
 \begin{abstract}
-Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we suggest a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could allow machine learning systems to learn continually from new words they encounter, and could also provide a model for human rapid word learning. 
+Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we highlight a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could allow machine learning systems to learn continually from new words they encounter, and could also provide a model for human rapid word learning. 
 \end{abstract}
 
 \section{Introduction}
@@ -63,16 +64,36 @@ However, these word vectors are typically trained on very large datasets, and th
 More recently \citet{Lazaridou2017} explored multi-modal word learning (similar to what children do when an adult points out a new object), and in the process suggested a simple heuristic for inferring a word vector from context: simply average together all the surrounding word vectors. This is sensible, since the surrounding words will likely occur in similar contexts. However, it ignores all syntactic information, by treating all the surrounding words identically, and it relies on the semantic information being linearly combinable between different word embeddings. Both of these factors will likely limit its performance. \par
 Is there a way we can do better? A deep learning system which has been trained to perform a language task must have learned a great deal of semantic and syntactic structure which would be useful for inferring the meaning of a new word. However, this knowledge is opaquely encoded in its weights. Is there a way we can exploit this knowledge, like humans exploit their prior knowledge when learning about a new word? \par
 \section{Approach}
-We suggest that we actually already know how to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! However, we cannot simply train the whole network to accomodate this new word, this would cause a great deal of interference with prior knowledge. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
-We take inspiration from this work to guide our approach. To learn from one sentence (or a few) containing a new word, we freeze all the weights in the network except those representing the new word (in a complex NLP system, there may be more than one such set of weights, for example often these systems have different representations for the same word on the inputs and outputs). We then use stochastic gradient descent (\(\eta = 0.01\)) to update the weights for the new word using 100 epochs of training over the sentence(s) containing it. \par
-
+We suggest that we actually already know how to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! Of course, we cannot simply train the whole network to accomodate this new word, this would lead to catastrophic interference. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
+We take inspiration from this work to guide our approach. To learn from one sentence (or a few) containing a new word, we freeze all the weights in the network except those representing the new word (in a complex NLP system, there may be more than one such set of weights, for example the model we evaluate has distinct input and output embeddings for each word). We then use stochastic gradient descent (\(\eta = 0.01\)) to update the weights for the new word using 100 epochs of training over the sentence(s) containing it. \par
+Of course, there are a variety of possible initializations for the embeddings before optimizing. In this paper, we consider three possibilities: 
+\begin{enumerate}
+\item Beginning with the current embedding for the word (since the model has never seen the word, and thus has been trained to never produce it, this will likely be an embedding that is far from any outputs the network typically produces).
+\item Beginning with a vector of zeros.
+\item Beginning with the centroid of the other words in the sentence, which \citet{Lazaridou2017} suggested was a useful estimate of an appropriate embedding.
+\end{enumerate}
+We compare this to two baselines:
+\begin{enumerate}
+\item The centroid of the embeddings for the other words in the sentence, as in \citet{Lazaridou2017}. 
+\item Training the model with the 10 training sentences included in the corpus from the beginning (i.e. the ``standard'' deep-learning approach).
+\end{enumerate}
+\subsection{Task, Model, and Approach}
+The framework we have described for updating embeddings could be applied very generally, but for the sake of this paper we ground it in a simple task: predicting the next word of a sentence based on the previous words, on the Penn Treebank dataset \citep{Marcus1993}. Specifically, we will use the (large) model architecture and approach of \citet{Zaremba2014a}. \par
+Of course, human language understanding is much more complex than just prediction, and grounding language in situations and goals is likely important for achieving deeper understanding of language \citep{Gauthier2016}. More recent work has begun to do this \citep[e.g]{Hermann2017}, and it's likely that our approach would be more effective in settings like these. The ability of humans to make rich inferences about text stems from the richness of our knowledge. However, for simplicity, we have chosen to first demonstrate it on the prediction task. \par 
+In order to test our one-shot word-learning algorithm on the Penn Treebank, we chose a word which appeared only 20 times in the training set. We removed the sentences containing this word and then trained the model with the remaining sentences for 55 epochs using the learning rate decay strategy of \citet{Zaremba2014a}. Because the PTB dataset contains over 40,000 sentences, the 20 missing ones had essentially no effect on the networks overall performance. We then split the 20 sentences containing the new word into 10 train and 10 test, and tried training on 1 - 10 of them in 10 different permutations (via a balanced Latin square \citep{Campbell1980}, which ensures that each sentence was used for one-shot learning once, and enforces diversity in the multi-shot learning examples). 
 \section{Results}
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{../../results/10perms_delta_perplexity.png}
+\caption{Percent change in perplexity on 10 test sentences containing new word, plotted vs. the number of training sentences, across four different words, comparing optimizing from three different starting points to centroid and training with the words baseline. (Note that the full training with the word was only run with all 10 training sentences.)}
+\label{main_results_1}
+\end{figure}
+
 
 \section{Discussion}
 
 \section{Conclusions}
 
-\section*{References}
 \bibliographystyle{apalike}
 \bibliography{one_shot_words}
 
