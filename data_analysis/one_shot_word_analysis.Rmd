@@ -104,7 +104,7 @@ d = d %>%
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, perm=factor(perm), train_with_word=F) %>%
   mutate(approach=factor(approach, 
                          levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
-                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp, pct_delta=100*nw_delta/withoutword_test_perp)
 ```
 
@@ -112,7 +112,7 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training with the word', train_with_word=T) %>%
+  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
   select(num_train, approach, new_word, nw_delta, pct_delta, train_with_word)
 avg_d = d %>% 
   group_by(num_train, approach, new_word, train_with_word) %>% 
@@ -120,8 +120,8 @@ avg_d = d %>%
   ungroup() %>% 
   rbind(., withword_d) %>%
   mutate(approach=factor(approach, 
-                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
-                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 # Approach comparisons
@@ -136,11 +136,15 @@ ggplot() +
   scale_color_brewer(palette='Dark2') +
   ylab("Change in perplexity on new word test data (%)") +
   guides(linetype=F) +
-  theme_bw(base_size=13) +
+  theme_bw(base_size=12) +
+  guides(color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
   theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 ```{r}
-ggsave('../results/10perms_delta_perplexity.png', width=10, height=7)
+ggsave('../results/10perms_delta_perplexity.png', width=7, height=5)
 ```
 
 ```{r}
@@ -154,8 +158,8 @@ noword_d = d %>%
   ungroup() %>%
   bind_rows(., noword_withword_d) %>%
   mutate(approach=factor(approach, 
-                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
-                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 ```{r, echo=FALSE, message=F}
@@ -319,22 +323,22 @@ skip_d = skip_d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_tes
                            optimizing=ifelse(skipping=="None", "Both", ifelse(skipping == "sm", "Input Embedding", "Output Embedding")),
                            approach=factor(approach, 
                                            levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
-                                           labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                                           labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 ```{r}
 # combine with subset of full training data that matches
 filtered_d = d %>% 
   filter(num_train %in% c(1, 10), 
-         approach %in% c("Centroid", "Optimizing from centroid")) %>%
+         approach %in% c("Centroid", "Optimizing\nfrom centroid")) %>%
   mutate(skipping='None', optimizing='Both') %>%
   select(-train_with_word)
 skip_d = rbind(filtered_d, skip_d)
 skip_d = skip_d %>%
   mutate(optimizing=factor(optimizing, levels=c("Input Embedding", "Output Embedding", "Both"))) %>%
   mutate(approach=factor(approach, 
-                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
-                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 ```{r}
@@ -353,13 +357,13 @@ ggplot() +
   facet_grid(approach ~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=c(1,10)) +
-  scale_color_brewer(palette='Dark2') +
+  scale_color_manual(values= c("#377EB8", "#E41A1C", "#984EA3")) +
   ylab("Change in perplexity on new word test data (%)") +
   theme_bw(base_size=12)
 ```
 
 ```{r}
-ggsave('../results/skipping_by_word.png', width=10, height=7)
+ggsave('../results/skipping_by_word.png', width=7, height=5)
 ```
 
 ```{r}
@@ -434,8 +438,8 @@ for (word in words) {
 d = d %>% 
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, test_delta=post_test_perp - pre_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp, perm=factor(perm), train_with_word=F) %>%
   mutate(approach=factor(approach, 
-                         levels=c("centroid", "opt_centroid", "train_with_word"), 
-                         labels=c("Centroid", "Optimizing from centroid", "Full training with the word")))
+                         levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
 ```
 
@@ -443,7 +447,7 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training with the word', train_with_word=T) %>%
+  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
   select(num_train, approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
 avg_d = d %>% 
   group_by(num_train, approach, new_word, train_with_word) %>% 
@@ -451,8 +455,8 @@ avg_d = d %>%
   ungroup() %>% 
   rbind(., withword_d) %>%
   mutate(approach=factor(approach, 
-                         levels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word"), 
-                         labels=c("Centroid", "Optimizing from current", "Optimizing from centroid", "Optimizing from zero", "Full training with the word")))
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 # Approach comparisons
@@ -466,12 +470,16 @@ ggplot() +
   scale_x_continuous(breaks=1:10) +
   scale_color_brewer(palette='Dark2', drop=FALSE) +
   ylab("Change in perplexity on new word test data (%)") +
-  guides(linetype=F) +
+  guides(linetype=F,
+         color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
   theme_bw(base_size=12) +
   theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 ```{r}
-ggsave('../results/10perms2_delta_perplexity.png', width=10, height=7)
+ggsave('../results/10perms2_delta_perplexity.png', width=7, height=5)
 ```
 
 ```{r}
@@ -483,11 +491,15 @@ ggplot() +
   scale_x_continuous(breaks=1:10) +
   scale_color_brewer(palette='Dark2', drop=F) +
   ylab("Change in perplexity on PTB test data (%)") +
-  guides(linetype=F) +
+  guides(linetype=F,
+         color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
   theme_bw(base_size=12) +
   theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
 ```
 
 ```{r}
-ggsave('../results/10perms2_cost_to_others.png', width=10, height=7)
+ggsave('../results/10perms2_cost_to_others.png', width=7, height=5)
 ```
