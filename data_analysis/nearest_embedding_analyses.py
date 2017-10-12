@@ -26,13 +26,16 @@ for word in words:
     smw = numpy.genfromtxt(smw_filename, delimiter=',')
     normalized_smw = smw / numpy.sqrt(numpy.sum(smw**2, axis=0))
 
-    for num_train in xrange(1, 11):
-	for perm in xrange(1, 11):
-	    for approach in approaches:
-		this_smw = numpy.genfromtxt("../result_data_4/%s_perm%i_train_logs/%s/embedding/num%i_%s_softmax_w_%s.csv" %(word, perm, word, num_train, approach, approach), delimiter=',')
-		inner_products = numpy.dot(this_smw, smw)
-		top = inner_products.argsort()[-10:]
-		top_words[word][approach].update(vocabulary[top])
+    for approach in approaches:
+	for num_train in xrange(1, 11):
+#	    norms = []
+	    for perm in xrange(1, 11):
+		    this_smw = numpy.genfromtxt("../result_data_4/%s_perm%i_train_logs/%s/embedding/num%i_%s_softmax_w_%s.csv" %(word, perm, word, num_train, approach, approach), delimiter=',')
+#		    norms.append(numpy.linalg.norm(this_smw))
+		    inner_products = numpy.dot(this_smw, smw)
+		    top = inner_products.argsort()[-10:]
+		    top_words[word][approach].update(vocabulary[top])
+#	    print word, approach, num_train, numpy.mean(norms)
 
     print word 
     print top_words[word]["centroid"]
