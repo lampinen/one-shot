@@ -4,7 +4,7 @@ from numpy import random
 data_file = "raw_data/ptb.train.txt"
 output_dir = "edited_data"
 output_file_prefix = "ptb.train."
-num_replay_lines = 100
+num_replay_lines = 1000
 
 latin_square_10 = [[0, 1, 9, 2, 8, 3, 7, 4, 6, 5],
 		   [1, 2, 0, 3, 9, 4, 8, 5, 7, 6],
@@ -34,7 +34,7 @@ def edit_many_many_splits_for_target_word(word):
 	for this_num in xrange(1,num_train+1):
 	    with open(output_dir + '/' + word + '_many_many/' + output_file_prefix + word + 'perm' + str(j) + '.' + str(this_num) + 'wordtrain.txt', "r") as word_train_f:
 		curr_lines = word_train_f.readlines()
-	    new_lines = curr_lines + replay_lines[:10*this_num]
+	    new_lines = curr_lines + replay_lines[:100*this_num]
 	    random.shuffle(new_lines)
 	    with open(output_dir + '/' + word + '_many_many/' + output_file_prefix + word + 'perm' + str(j) + '.' + str(this_num) + 'wordtrain.txt', "w") as word_train_f:
 		word_train_f.writelines(new_lines)
