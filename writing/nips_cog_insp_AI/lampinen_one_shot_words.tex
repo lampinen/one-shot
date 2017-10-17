@@ -89,13 +89,13 @@ In order to test our one-shot word-learning algorithm on the Penn Treebank, we c
 \label{main_results_1}
 \end{figure}
 We first evaluated our approach on the words ``bonuses,'' ``explained,'' ``marketers,'' and ``strategist,'' either initializing from the current embedding for the word (after never seeing it), the zero vector, or the centroid of the surrounding words, and compared to the baselines of just taking the centroid of the surrounding words and full training with the words, see Fig. \ref{main_results_1}. Optimizing from the centroid was clearly the best approach, it outperforms all other approaches for learning a new word for all datasets, including the centroid approach \citet{Lazaridou2017}, and even outperforms full training with the word in three of the four cases (however, this likely comes with a tradeoff, see below). The optimizing approaches are strongly affected by embedding initialization with few training sentences (e.g. one-shot learning), but by 10 sentences they all perform quite similarly. \par
-Next, we 
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{../../results/10perms2_delta_perplexity.png}
 \caption{Percent change in perplexity on 10 test sentences containing new word, plotted vs. the number of training sentences, across four different words, comparing optimizing from the centroid to just taking the centroid and training with the word baselines.}
 \label{main_results_2}
 \end{figure}
+Next, we replicated these findings with four new words (``borrow,'' ``cowboys'', ``immune,'' and ``rice''), see Fig. \ref{main_results_2}. 
 
 
 \begin{figure}
@@ -108,6 +108,7 @@ Next, we
 \section{Discussion}
 
 \section{Conclusions}
+We have presented a technique for doing one- or few-shot learning of word embeddings from text data. This technique could allow natural language systems to adapt more flexibily to a changing world, as humans do. It could also provide a model for human learning. 
 
 \bibliographystyle{apalike}
 \bibliography{one_shot_words}
