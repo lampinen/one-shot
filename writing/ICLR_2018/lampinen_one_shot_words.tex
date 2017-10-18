@@ -1,49 +1,35 @@
 \documentclass{article}
 
-% if you need to pass options to natbib, use, e.g.:
-% \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading nips_2017
-%
-% to avoid loading the natbib package, add option nonatbib:
-% \usepackage[nonatbib]{nips_2017}
-
-\usepackage[final]{nips_2017}
-
-% to compile a camera-ready version, add the [final] option, e.g.:
-% \usepackage[final]{nips_2017}
-
-\usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{iclr2018_conference,times}
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
+\usepackage{amsmath}
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{graphicx}
+\usepackage{subcaption}
 
 \title{Jabberwocky: One-shot and few-shot learning of word embeddings}
 
 \author{
-  Andrew K. Lampinen\\
+  Andrew K. Lampinen \& James L. McClelland\\
   Department of Psychology\\
   Stanford University\\
   Stanford, CA 94305 \\
-  \texttt{lampinen@stanford.edu} \\
-  \And
-  James L. McClelland\\
-  Department of Psychology\\
-  Stanford University\\
-  Stanford, CA 94305 \\
-  \texttt{mcclelland@stanford.edu} \\
+  \texttt{\{lampinen,mcclelland\}@stanford.edu} \\
 }
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we highlight a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could allow machine learning systems to learn continually from new words they encounter, and could also provide a model for human rapid word learning. 
+Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we highlight a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could make natural language processing systems much more flexible, by allowing them to learn continually from new words they encounter. 
 \end{abstract}
 
 \section{Introduction}
@@ -56,15 +42,15 @@ Long time the manxome foe he sought—\\
 So rested he by the Tumtum tree,\\
 And stood awhile in thought.}
 \end{quote}
-Despite the fact that there are several nonsense words, we can follow the narrative of the poem and understand approximately what many of the words mean by how they relate other words. This a vital skill for interacting with the world -- we constantly need to learn new words and ideas. More generally, humans are often able to gracefully accomodate situations that differ radically from what they have seen before.\par 
+Despite the fact that there are several nonsense words, we can follow the narrative of the poem and understand approximately what many of the words mean by how they relate other words. This a vital skill for interacting with the world -- we constantly need to learn new words and ideas. This is true beyond simply language, humans are often able to gracefully accomodate situations that differ radically from what they have seen before.\par 
 By contrast, standard deep learning systems require much more data than humans to learn a concept or task, and sometimes generalize poorly \cite{Lake2016}. How can deep learning systems build on their prior knowledge to learn effectively from a few pieces of information? In this paper, we explore this issue in the specific context of creating a useful representation for a new word based on its context. \par
 \subsection{Background}
-Continuous representations of words have proven to be very effective in recent years \cite[e.g.]{Mikolov2013, Pennington2014}. These approaches represent words as vectors in a space, which are learned from large corpuses of text data. Using these vectors, deep learning systems have achieved success on tasks ranging from natural language translation \cite[e.g.]{Wu2016} to question answering \cite[e.g.]{Santoro2017}. \par
+Continuous representations of words have proven to be very effective \cite[e.g.]{Mikolov2013, Pennington2014}. These approaches represent words as vectors in a space, which are learned from large corpuses of text data. Using these vectors, deep learning systems have achieved success on tasks ranging from natural language translation \cite[e.g.]{Wu2016} to question answering \cite[e.g.]{Santoro2017}. \par
 However, these word vectors are typically trained on very large datasets, and there has been surprisingly little prior work on how to learn embeddings for new words once the system has been trained. \citet{Cotterell2016} proposed a method for incorporating morphological information into word embeddings that allows for limited generalization to new words (e.g. generalizing to unseen conjugations of a known verb). However, this is not a general system for learning representations for new words, and requires building in rather strong structural assumptions about the language and having appropriately labelled data to exploit them. \par
 More recently \citet{Lazaridou2017} explored multi-modal word learning (similar to what children do when an adult points out a new object), and in the process suggested a simple heuristic for inferring a word vector from context: simply average together all the surrounding word vectors. This is sensible, since the surrounding words will likely occur in similar contexts. However, it ignores all syntactic information, by treating all the surrounding words identically, and it relies on the semantic information being linearly combinable between different word embeddings. Both of these factors will likely limit its performance. \par
-Is there a way we can do better? A deep learning system which has been trained to perform a language task must have learned a great deal of semantic and syntactic structure which would be useful for inferring the meaning of a new word. However, this knowledge is opaquely encoded in its weights. Is there a way we can exploit this knowledge, like humans exploit their prior knowledge when learning about a new word? \par
+Can we do better? A deep learning system which has been trained to perform a language task must have learned a great deal of semantic and syntactic structure which would be useful for inferring the meaning of a new word. However, this knowledge is opaquely encoded in its weights. Is there a way we can exploit this knowledge when learning about a new word? \par
 \section{Approach}
-We suggest that we actually already know how to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! Of course, we cannot simply train the whole network to accomodate this new word, this would lead to catastrophic interference. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
+We suggest that we already have a way to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! Of course, we cannot simply train the whole network to accomodate this new word, this would lead to catastrophic interference. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
 We take inspiration from this work to guide our approach. To learn from one sentence (or a few) containing a new word, we freeze all the weights in the network except those representing the new word (in a complex NLP system, there may be more than one such set of weights, for example the model we evaluate has distinct input and output embeddings for each word). We then use stochastic gradient descent (\(\eta = 0.01\)) to update the weights for the new word using 100 epochs of training over the sentence(s) containing it. \par
 Of course, there are a variety of possible initializations for the embeddings before optimizing. In this paper, we consider three possibilities: 
 \begin{enumerate}
@@ -72,7 +58,7 @@ Of course, there are a variety of possible initializations for the embeddings be
 \item Beginning with a vector of zeros.
 \item Beginning with the centroid of the other words in the sentence, which \citet{Lazaridou2017} suggested was a useful estimate of an appropriate embedding.
 \end{enumerate}
-We compare this to two baselines:
+We compare these to two baselines:
 \begin{enumerate}
 \item The centroid of the embeddings for the other words in the sentence, as in \citet{Lazaridou2017}. 
 \item Training the model with the 10 training sentences included in the corpus from the beginning (i.e. the ``standard'' deep-learning approach).
@@ -89,42 +75,61 @@ In order to test our one-shot word-learning algorithm on the Penn Treebank, we c
 \label{main_results_1}
 \end{figure}
 We first evaluated our approach on the words ``bonuses,'' ``explained,'' ``marketers,'' and ``strategist,'' either initializing from the current embedding for the word (after never seeing it), the zero vector, or the centroid of the surrounding words, and compared to the baselines of just taking the centroid of the surrounding words and full training with the words, see Fig. \ref{main_results_1}. Optimizing from the centroid was clearly the best approach, it outperforms all other approaches for learning a new word for all datasets, including the centroid approach \citet{Lazaridou2017}, and even outperforms full training with the word in three of the four cases (however, this likely comes with a tradeoff, see below). The optimizing approaches are strongly affected by embedding initialization with few training sentences (e.g. one-shot learning), but by 10 sentences they all perform quite similarly. \par
+Of course, this learning might still cause interference with the networks prior knowledge. In order to evaluate this, we replicated these findings with four new words (``borrow,'' ``cowboys'', ``immune,'' and ``rice''), but also evaluated the change in perplexity on the PTB test corpus (see Appendix \ref{supp_fig_appdx}, Fig. \ref{interference_fig}). Indeed, we found that while the centroid method does not substantially change the test perplexity on the corpus, the optimizing method causes increasingly more interference as more training sentences are provided, up to a ~1\% decline in the case of training on all 10 sentences. \par
+This is not necessarily surprising, the base rate of occurrence of the new word in the training data is artificially inflated relative to its true base rate probability. This problem of learning from data which is locally highly correlated and biased has been solved in many recent domains by the use of replay buffers to interleave learning, especially in reinforcement learning \citep[e.g]{Mnih2015}, an idea that also relates to the complementary learning systems theory \citep{Kumaran2016} that helped inspire this work. \par
+We therefore tested whether using a replay buffer while learning the new word would ameliorate this interference. Specifically, we sampled 100 negative sentences from the corpus without the word that the network was pre-trained on, and interleaved these at random with the sentences containing the new word (the same negative samples were used for each training epoch). \par
+Indeed
+
+
 \begin{figure}
 \centering
-\includegraphics[width=\textwidth]{../../results/10perms2_delta_perplexity.png}
-\caption{Percent change in perplexity on 10 test sentences containing new word, plotted vs. the number of training sentences, across four different words, comparing optimizing from the centroid to just taking the centroid and training with the word baselines.}
-\label{main_results_2}
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{../../results/10perms5_replay_delta_perplexity.png}
+\caption{Percent change in perplexity on 10 test sentences containing new word.}
+\end{subfigure}
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{../../results/10perms5_replay_cost_to_others.png}
+\caption{Percent change in perplexity on full PTB test corpus.}
+\end{subfigure}
+\caption{When using a replay buffer, learning new words does not interfere substantially with prior knowledge.}
+\label{ameliorating_interference_fig}
 \end{figure}
-Next, we replicated these findings with four new words (``borrow,'' ``cowboys'', ``immune,'' and ``rice''), see Fig. \ref{main_results_2}. 
 
-
+\subsection{Where is the magic happening?}
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{../../results/skipping_by_word.png}
 \caption{Comparing optimizing the input embedding, output embedding, or both -- where is the magic happening?}
 \label{skipping_results}
 \end{figure}
+Because the model we are using has distinct input and output embeddings, we are able to compare learning each of these features on its own and evaluate where the benefits of updating for the new word are occurring. Specifically, we compared training where only the softmax weights and biases for the new word were changed to training where only the input embedding for the new word was changed, as well as to our original results changing both embeddings, for one-shot and ten-shot learning. \par
+See Fig. \ref{skipping_results} for our results. We found that it was mostly the output embeddings that are improving. In one-shot learning, changing the input embedding alone causes almost no improvement, but with ten training sentences it is producing some improvement, both alone and when the output embedding is being trained as well. However, the effect is much smaller than the effect of the output embedding. That is, the model is mostly improving at predicting the new word in context, rather than predicting context based on the new word. \par 
+This is sensible for several reasons. First, whatever the new word conveys about the context will already be partly conveyed by the other words in the context. Second, our training approach was slightly more unnatural than that humans experience, or even than the pretraining for the network, in that the sentences were presented removed from the context of surrounding sentences. This means that the model has less data to learn about how the new word predicts surrounding context, which  
 
-\begin{figure}
-\centering
-\includegraphics[width=\textwidth]{../../results/10perms2_cost_to_others.png}
-\caption{Unfortunately this interferes with performance on other words}
-\label{interference}
-\end{figure}
 
-\begin{figure}
-\centering
-\includegraphics[width=\textwidth]{../../results/10perms5_replay_cost_to_others.png}
-\caption{This interference can be substantially ameliorated by using a small replay buffer}
-\label{ameliorating_interference}
-\end{figure}
 
 \section{Discussion}
 
 \section{Conclusions}
 We have presented a technique for doing one- or few-shot learning of word embeddings from text data. This technique could allow natural language systems to adapt more flexibily to a changing world, as humans do. It could also provide a model for human learning. 
 
-\bibliographystyle{apalike}
+\bibliographystyle{iclr2018_conference}
 \bibliography{one_shot_words}
 
+\appendix
+\section{Supplementary figures} \label{supp_fig_appdx}
+
+\begin{figure}
+\centering
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{../../results/10perms2_delta_perplexity.png}
+\caption{Percent change in perplexity on 10 test sentences containing new word.}
+\end{subfigure}
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{../../results/10perms2_cost_to_others.png}
+\caption{Percent change in perplexity on full PTB test corpus.}
+\end{subfigure}
+\caption{Interference with prior knowledge caused by na\"{i}ve use of our approach}
+\label{interference_fig}
+\end{figure}
 \end{document}
