@@ -15,17 +15,17 @@ library(stringr)
 ```{r}
 #words = c("explained", "bonuses", "explained_2nd", "bonuses_2nd") #, "bonuses", "entry", "rice", "rolled", "marketers", "immune", "cowboys", "borrow")
 #num_train = 1:10
-#approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
+#Approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
 
 #d = data.frame()
 #for (word in words) {
 #  for (n in num_train) {
-#    for (a in approaches) {
+#    for (a in Approaches) {
 #      filename = sprintf("../%s/%i_%s_results_log.csv", word, n, a)
 #      this_d = read.csv(filename, header=F)
 #      this_d = this_d %>% 
 #        spread(V1, V2) %>%
-#        mutate(new_word=word, num_train=n, approach=a)
+#        mutate(new_word=word, num_train=n, Approach=a)
 #      d = rbind(d, this_d)
 #      
 #    }
@@ -41,7 +41,7 @@ library(stringr)
 # Centroid vs. optimizing
 
 ```{r, warning=F, message=F}
-#ggplot(data=d, aes(x=num_train, y=nw_delta, color=approach)) +
+#ggplot(data=d, aes(x=num_train, y=nw_delta, color=Approach)) +
 #  geom_line() +
 #  facet_wrap(~ new_word) +
 #  xlab("Number of training sentences") +
@@ -61,14 +61,14 @@ library(stringr)
 words = c("explained", "bonuses", "strategist", "marketers") 
 num_train = 1:10
 perms = 1:10
-approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
+Approaches = c("opt", "opt_centroid", "centroid", "opt_zero")
 
 d = data.frame()
 withword_d = data.frame()
 for (word in words) {
   for (perm in perms) {
     for (n in num_train) {
-      for (a in approaches) {
+      for (a in Approaches) {
         filename = sprintf("../result_data/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
         if (!file.exists(filename)) {
           next
@@ -76,7 +76,7 @@ for (word in words) {
         this_d = read.csv(filename, header=F)
         this_d = this_d %>% 
           spread(V1, V2) %>%
-          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+          mutate(new_word=word, perm=perm, num_train=n, Approach=a)
         d = bind_rows(d, this_d)
         
       }
@@ -102,7 +102,7 @@ for (word in words) {
 ```{r}
 d = d %>% 
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, perm=factor(perm), train_with_word=F) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp, pct_delta=100*nw_delta/withoutword_test_perp)
@@ -112,14 +112,14 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, approach, new_word, nw_delta, pct_delta, train_with_word)
+  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, train_with_word)
 avg_d = d %>% 
-  group_by(num_train, approach, new_word, train_with_word) %>% 
+  group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta)) %>% 
   ungroup() %>% 
   rbind(., withword_d) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
@@ -128,8 +128,8 @@ avg_d = d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -149,22 +149,22 @@ ggsave('../results/10perms_delta_perplexity.png', width=7, height=5)
 
 ```{r}
 noword_withword_d = withword_d %>%
-  group_by(num_train, approach, train_with_word) %>% 
+  group_by(num_train, Approach, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta)) %>% 
   ungroup()
 noword_d = d %>% 
-  group_by(num_train, approach, train_with_word) %>% 
+  group_by(num_train, Approach, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta)) %>% 
   ungroup() %>%
   bind_rows(., noword_withword_d) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=noword_d, aes(x=num_train, y=pct_delta, color=approach, linetype=train_with_word), size=1) +
+  geom_line(data=noword_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
   scale_color_brewer(palette='Dark2') +
@@ -184,11 +184,11 @@ ggsave('../results/10perms_delta_perplexity_summarized.png', width=10, height=7)
 #words = c("explained", "bonuses") 
 #num_train = 1:10
 #perms = 1:10
-#approaches = c("opt_centroid", "centroid", "opt_zero")
+#Approaches = c("opt_centroid", "centroid", "opt_zero")
 
 #d_emb = data.frame()
 #for (word in words) {
-#  for (a in approaches) {
+#  for (a in Approaches) {
 #    for (perm in perms) {
 #      for (n in num_train) {
 #      
@@ -197,7 +197,7 @@ ggsave('../results/10perms_delta_perplexity_summarized.png', width=10, height=7)
 #        this_d = this_d %>% 
 #          mutate(index=1:1500) %>%
 #          spread(index, V1) %>%
-#          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+#          mutate(new_word=word, perm=perm, num_train=n, Approach=a)
 #        d_emb = rbind(d_emb, this_d)
 #      }
 #    }
@@ -212,7 +212,7 @@ ggsave('../results/10perms_delta_perplexity_summarized.png', width=10, height=7)
 
 
 ```{r}
-#q = simil(d_emb %>% select(-c(new_word, perm, num_train, approach)), upper=T, by_rows=T)
+#q = simil(d_emb %>% select(-c(new_word, perm, num_train, Approach)), upper=T, by_rows=T)
 #image(as.matrix(q))
 ```
 
@@ -234,7 +234,7 @@ ggsave('../results/10perms_delta_perplexity_summarized.png', width=10, height=7)
 
 
 ```{r}
-approaches = c("centroid", "opt", "opt_centroid", "opt_zero")
+Approaches = c("centroid", "opt", "opt_centroid", "opt_zero")
 
 embedding_d = data.frame()
 softmax_weight_d = data.frame()
@@ -250,13 +250,13 @@ this_d = this_d %>%
 softmax_weight_d = rbind(softmax_weight_d, this_d)
 for (a in 1:4) {
   for (b in a:4) {
-    this_type = sprintf('%s vs. %s', approaches[a], approaches[b])
-    this_d = read.csv(sprintf('intermediate_data/emb_%s_%s_simils.csv', approaches[a], approaches[b]), header=F)
+    this_type = sprintf('%s vs. %s', Approaches[a], Approaches[b])
+    this_d = read.csv(sprintf('intermediate_data/emb_%s_%s_simils.csv', Approaches[a], Approaches[b]), header=F)
     this_d = this_d %>% 
       mutate(type=this_type) %>%
       rename(euclidean_distance=V1)
     embedding_d = rbind(embedding_d, this_d)
-    this_d = read.csv(sprintf('intermediate_data/smw_%s_%s_simils.csv', approaches[a], approaches[b]), header=F)
+    this_d = read.csv(sprintf('intermediate_data/smw_%s_%s_simils.csv', Approaches[a], Approaches[b]), header=F)
     this_d = this_d %>% 
       mutate(type=this_type) %>%
       rename(euclidean_distance=V1)
@@ -291,7 +291,7 @@ ggsave('../results/smw_distances_violin.png')
 words = c("explained", "bonuses", "strategist", "marketers") 
 num_train = c(1, 10)
 perms = 1:10
-approaches = c("opt_centroid", "centroid")
+Approaches = c("opt_centroid", "centroid")
 skips = c("emb","sm")
 
 skip_d = data.frame()
@@ -299,7 +299,7 @@ for (word in words) {
   for (perm in perms) {
     for (skipping in skips) {
       for (n in num_train) {
-        for (a in approaches) {
+        for (a in Approaches) {
           filename = sprintf("../result_data/%s_perm%i_skipping_%s_train_logs/%s/%i_%s_results_log.csv", word, perm, skipping, word, n, a)
           if (!file.exists(filename)){
             next
@@ -307,7 +307,7 @@ for (word in words) {
           this_d = read.csv(filename, header=F)
           this_d = this_d %>% 
             spread(V1, V2) %>%
-            mutate(new_word=word, perm=perm, num_train=n, approach=a, skipping=skipping)
+            mutate(new_word=word, perm=perm, num_train=n, Approach=a, skipping=skipping)
           skip_d = bind_rows(skip_d, this_d)
         }
       }
@@ -320,8 +320,8 @@ for (word in words) {
 skip_d = skip_d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp,
                            pct_delta = 100 * nw_delta / pre_new_word_test_perp,
                            perm=factor(perm),
-                           optimizing=ifelse(skipping=="None", "Both", ifelse(skipping == "sm", "Input Embedding", "Output Embedding")),
-                           approach=factor(approach, 
+                           Optimizing=ifelse(skipping=="None", "Both", ifelse(skipping == "sm", "Input Embedding", "Output Embedding")),
+                           Approach=factor(Approach, 
                                            levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
                                            labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
@@ -330,20 +330,20 @@ skip_d = skip_d %>% mutate(nw_delta = post_new_word_test_perp - pre_new_word_tes
 # combine with subset of full training data that matches
 filtered_d = d %>% 
   filter(num_train %in% c(1, 10), 
-         approach %in% c("Centroid", "Optimizing\nfrom centroid")) %>%
-  mutate(skipping='None', optimizing='Both') %>%
+         Approach %in% c("Centroid", "Optimizing\nfrom centroid")) %>%
+  mutate(skipping='None', Optimizing='Both') %>%
   select(-train_with_word)
 skip_d = rbind(filtered_d, skip_d)
 skip_d = skip_d %>%
-  mutate(optimizing=factor(optimizing, levels=c("Input Embedding", "Output Embedding", "Both"))) %>%
-  mutate(approach=factor(approach, 
+  mutate(Optimizing=factor(Optimizing, levels=c("Input Embedding", "Output Embedding", "Both"))) %>%
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
 
 ```{r}
 avg_skip_d = skip_d %>% 
-  group_by(num_train, approach, new_word, optimizing) %>% 
+  group_by(num_train, Approach, new_word, Optimizing) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta = mean(pct_delta)) %>% 
   ungroup()
 ```
@@ -352,9 +352,9 @@ avg_skip_d = skip_d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_skip_d, aes(x=num_train, y=pct_delta, color=optimizing), size=1) +
-  geom_line(data=skip_d, aes(x=num_train, y=pct_delta, color=optimizing, group=interaction(optimizing, perm)), alpha=0.25) +
-  facet_grid(approach ~ new_word) +
+  geom_line(data=avg_skip_d, aes(x=num_train, y=pct_delta, color=Optimizing), size=1) +
+  geom_line(data=skip_d, aes(x=num_train, y=pct_delta, color=Optimizing, group=interaction(Optimizing, perm)), alpha=0.25) +
+  facet_grid(Approach ~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=c(1,10)) +
   scale_color_manual(values= c("#377EB8", "#E41A1C", "#984EA3")) +
@@ -368,15 +368,15 @@ ggsave('../results/skipping_by_word.png', width=7, height=5)
 
 ```{r}
 noword_avg_skip_d = skip_d %>% 
-  group_by(num_train, approach, optimizing) %>% 
+  group_by(num_train, Approach, Optimizing) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta = mean(pct_delta)) %>% 
   ungroup()
 ```
 
 ```{r}
 ggplot() +
-  geom_line(data=noword_avg_skip_d, aes(x=num_train, y=pct_delta, color=optimizing), size=1) +
-  facet_grid(~ approach) +
+  geom_line(data=noword_avg_skip_d, aes(x=num_train, y=pct_delta, color=Optimizing), size=1) +
+  facet_grid(~ Approach) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=c(1,10)) +
   scale_color_brewer(palette='Dark2') +
@@ -396,14 +396,14 @@ ggsave('../results/skipping_summarized.png')
 words = c("borrow", "cowboys", "immune", "rice") 
 num_train = 1:10
 perms = 1:10
-approaches = c("opt_centroid", "centroid")
+Approaches = c("opt_centroid", "centroid")
 
 d = data.frame()
 withword_d = data.frame()
 for (word in words) {
   for (perm in perms) {
     for (n in num_train) {
-      for (a in approaches) {
+      for (a in Approaches) {
         filename = sprintf("../result_data_3/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
         if (!file.exists(filename)) {
           next
@@ -411,7 +411,7 @@ for (word in words) {
         this_d = read.csv(filename, header=F)
         this_d = this_d %>% 
           spread(V1, V2) %>%
-          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+          mutate(new_word=word, perm=perm, num_train=n, Approach=a)
         d = bind_rows(d, this_d)
         
       }
@@ -437,7 +437,7 @@ for (word in words) {
 ```{r}
 d = d %>% 
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, test_delta=post_test_perp - pre_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp, perm=factor(perm), train_with_word=F) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
@@ -447,14 +447,14 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
+  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
 avg_d = d %>% 
-  group_by(num_train, approach, new_word, train_with_word) %>% 
+  group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta), test_delta=mean(test_delta), pct_test_delta=mean(pct_test_delta)) %>% 
   ungroup() %>% 
   rbind(., withword_d) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
@@ -463,8 +463,8 @@ avg_d = d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -484,8 +484,8 @@ ggsave('../results/10perms2_delta_perplexity.png', width=7, height=5)
 
 ```{r}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -511,14 +511,14 @@ ggsave('../results/10perms2_cost_to_others.png', width=7, height=5)
 words = c("borrow", "cowboys", "immune", "rice") 
 num_train = 1:10
 perms = 1:10
-approaches = c("opt_centroid", "centroid")
+Approaches = c("opt_centroid", "centroid")
 
 d = data.frame()
 withword_d = data.frame()
 for (word in words) {
   for (perm in perms) {
     for (n in num_train) {
-      for (a in approaches) {
+      for (a in Approaches) {
         filename = sprintf("../result_data_4/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
         if (!file.exists(filename)) {
           next
@@ -526,7 +526,7 @@ for (word in words) {
         this_d = read.csv(filename, header=F)
         this_d = this_d %>% 
           spread(V1, V2) %>%
-          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+          mutate(new_word=word, perm=perm, num_train=n, Approach=a)
         d = bind_rows(d, this_d)
         
       }
@@ -552,7 +552,7 @@ for (word in words) {
 ```{r}
 d = d %>% 
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, test_delta=post_test_perp - pre_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp, perm=factor(perm), train_with_word=F) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
@@ -562,14 +562,14 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
+  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
 avg_d = d %>% 
-  group_by(num_train, approach, new_word, train_with_word) %>% 
+  group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta), test_delta=mean(test_delta), pct_test_delta=mean(pct_test_delta)) %>% 
   ungroup() %>% 
   rbind(., withword_d) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
@@ -578,8 +578,8 @@ avg_d = d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -599,8 +599,8 @@ ggsave('../results/10perms4_bias_cent_delta_perplexity.png', width=7, height=5)
 
 ```{r}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -626,14 +626,14 @@ ggsave('../results/10perms4_bias_cent_cost_to_others.png', width=7, height=5)
 words = c("borrow", "cowboys", "immune", "rice") 
 num_train = 1:10
 perms = 1:2
-approaches = c("opt_centroid", "centroid")
+Approaches = c("opt_centroid", "centroid")
 
 d = data.frame()
 withword_d = data.frame()
 for (word in words) {
   for (perm in perms) {
     for (n in num_train) {
-      for (a in approaches) {
+      for (a in Approaches) {
         filename = sprintf("../result_data_5/%s_perm%i_train_logs/%s/%i_%s_results_log.csv", word, perm, word, n, a)
         if (!file.exists(filename)) {
           next
@@ -641,7 +641,7 @@ for (word in words) {
         this_d = read.csv(filename, header=F)
         this_d = this_d %>% 
           spread(V1, V2) %>%
-          mutate(new_word=word, perm=perm, num_train=n, approach=a)
+          mutate(new_word=word, perm=perm, num_train=n, Approach=a)
         d = bind_rows(d, this_d)
         
       }
@@ -667,7 +667,7 @@ for (word in words) {
 ```{r}
 d = d %>% 
   mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, test_delta=post_test_perp - pre_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp, perm=factor(perm), train_with_word=F) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
@@ -677,14 +677,14 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 number_of_new_words = length(words)
 withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
+  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
 avg_d = d %>% 
-  group_by(num_train, approach, new_word, train_with_word) %>% 
+  group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta), test_delta=mean(test_delta), pct_test_delta=mean(pct_test_delta)) %>% 
   ungroup() %>% 
   rbind(., withword_d) %>%
-  mutate(approach=factor(approach, 
+  mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
 ```
@@ -693,8 +693,8 @@ avg_d = d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
@@ -714,8 +714,8 @@ ggsave('../results/10perms5_replay_delta_perplexity.png', width=7, height=5)
 
 ```{r}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=approach, linetype=train_with_word), size=1) +
-  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
   scale_x_continuous(breaks=1:10) +
