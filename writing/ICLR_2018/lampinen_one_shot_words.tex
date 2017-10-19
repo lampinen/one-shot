@@ -78,9 +78,6 @@ We first evaluated our approach on the words ``bonuses,'' ``explained,'' ``marke
 Of course, this learning might still cause interference with the networks prior knowledge. In order to evaluate this, we replicated these findings with four new words (``borrow,'' ``cowboys'', ``immune,'' and ``rice''), but also evaluated the change in perplexity on the PTB test corpus (see Appendix \ref{supp_fig_appdx}, Fig. \ref{interference_fig}). Indeed, we found that while the centroid method does not substantially change the test perplexity on the corpus, the optimizing method causes increasingly more interference as more training sentences are provided, up to a ~1\% decline in the case of training on all 10 sentences. \par
 This is not necessarily surprising, the base rate of occurrence of the new word in the training data is artificially inflated relative to its true base rate probability. This problem of learning from data which is locally highly correlated and biased has been solved in many recent domains by the use of replay buffers to interleave learning, especially in reinforcement learning \citep[e.g]{Mnih2015}, an idea that also relates to the complementary learning systems theory \citep{Kumaran2016} that helped inspire this work. \par
 We therefore tested whether using a replay buffer while learning the new word would ameliorate this interference. Specifically, we sampled 100 negative sentences from the corpus without the word that the network was pre-trained on, and interleaved these at random with the sentences containing the new word (the same negative samples were used for each training epoch). \par
-Indeed
-
-
 \begin{figure}
 \centering
 \begin{subfigure}[b]{\textwidth}
@@ -91,9 +88,13 @@ Indeed
 \includegraphics[width=\textwidth]{../../results/10perms5_replay_cost_to_others.png}
 \caption{Percent change in perplexity on full PTB test corpus.}
 \end{subfigure}
-\caption{When using a replay buffer, learning new words does not interfere substantially with prior knowledge.}
+\caption{When using a replay buffer, learning new words does not interfere as substantially with prior knowledge.}
 \label{ameliorating_interference_fig}
 \end{figure}
+Indeed, interleaving sentences without the word substantially reduced the interference caused by the new word, see Fig. \ref{ameliorating_interference_fig}. \par
+{\color{red} TODO: update figure and paragraphs above + below with new results}\par
+It is interesting to note that only one of these words appears in the PTB test data (``cowboys''), and it only appears once. Why then does full training with the word result in lowered test perplexity on the PTB test data in three out of four cases? Much of this may just be chance variation, but in general we would expect learning about a word to be useful not just for the sake of learning about that word, but because each word is a small piece of the signal by which the network learns about language more generally. Even if a word does not appear in the test corpus, the network may learn something useful from exposure to it.\par 
+
 
 \subsection{Where is the magic happening?}
 \begin{figure}
@@ -102,16 +103,14 @@ Indeed
 \caption{Comparing optimizing the input embedding, output embedding, or both -- where is the magic happening?}
 \label{skipping_results}
 \end{figure}
-Because the model we are using has distinct input and output embeddings, we are able to compare learning each of these features on its own and evaluate where the benefits of updating for the new word are occurring. Specifically, we compared training where only the softmax weights and biases for the new word were changed to training where only the input embedding for the new word was changed, as well as to our original results changing both embeddings, for one-shot and ten-shot learning. \par
-See Fig. \ref{skipping_results} for our results. We found that it was mostly the output embeddings that are improving. In one-shot learning, changing the input embedding alone causes almost no improvement, but with ten training sentences it is producing some improvement, both alone and when the output embedding is being trained as well. However, the effect is much smaller than the effect of the output embedding. That is, the model is mostly improving at predicting the new word in context, rather than predicting context based on the new word. \par 
-This is sensible for several reasons. First, whatever the new word conveys about the context will already be partly conveyed by the other words in the context. Second, our training approach was slightly more unnatural than that humans experience, or even than the pretraining for the network, in that the sentences were presented removed from the context of surrounding sentences. This means that the model has less data to learn about how the new word predicts surrounding context, which  
-
-
+Because the model we are using has distinct input and output embeddings, we are able to compare learning these individually to evaluate where the benefits of learning about the new word are occurring. Specifically, we compared training where only the softmax weights and bias (output embedding) for the new word were changed to training where only the input embedding for the new word was changed, as well as to changing both embeddings as above, for one-shot and ten-shot learning. See Fig. \ref{skipping_results} for our results.\par
+We found that it was mostly the output embeddings that are improving. In one-shot learning, changing the input embedding alone causes almost no improvement, and changing the both embeddings does not see substantially different from changing just the output embedding. However, with ten training sentences the updated input embedding is producing some improvement, both alone and when trained together with the output embedding. Even in this case, however, the effect of the input embedding is still much smaller than the effect of the output embedding. That is, the model is mostly improving at predicting the new word in context, rather than predicting context based on the new word. \par 
+This is sensible for several reasons. First, whatever the new word conveys about the context will already be partly conveyed by the other words in the context. Second, our training approach was more unnatural than the situations in which a human might experience a new word, or even than the pretraining for the network, in that the sentences were presented without the context of surrounding sentences. This means that the model has less data to learn about how the new word predicts surrounding context, and less information about the context which predicts this word. This may also explain why full training with the word still produced better results in some cases than updating for it.\par
 
 \section{Discussion}
 
 \section{Conclusions}
-We have presented a technique for doing one- or few-shot learning of word embeddings from text data. This technique could allow natural language systems to adapt more flexibily to a changing world, as humans do. It could also provide a model for human learning. 
+We have presented a technique for doing one- or few-shot learning of word embeddings from text data: freeze all the weights in the network except the embeddings for the new word, and then optimize these embeddings for the sentence, interleaving with negative examples from network's prior experience and stopping early. This results in substantial improvement of the ability to predict the word in context, with minimal impairment of prediction of other words. This technique could allow natural language processing systems to adapt more flexibly to a changing world, like humans do. 
 
 \bibliographystyle{iclr2018_conference}
 \bibliography{one_shot_words}
