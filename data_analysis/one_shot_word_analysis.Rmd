@@ -734,3 +734,44 @@ ggplot() +
 ```{r}
 ggsave('../results/10perms5_replay_cost_to_others.png', width=7, height=5)
 ```
+
+# Embeddings 2.0
+```{r}
+smw_d = read.csv('../result_data_4/simil_corrs.csv', header=T)
+
+smw_d = smw_d %>% 
+  mutate(similarity_correlation = 1-similarity_correlation) %>% #correlation instead of correlation distance -- easier to read
+  group_by(word, approach, perm, num_train) %>%
+  summarize(similarity_correlation = mean(similarity_correlation)) %>%
+  ungroup() %>%
+  mutate(approach=factor(approach, 
+                         levels=c(" centroid", "Optimizing\nfrom current", " opt_centroid", "Optimizing\nfrom zero", " with"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"))) 
+
+withword_d = smw_d %>%
+  filter(approach = "Full training\nwith the word")
+```
+
+
+```{r}
+plotting_d = smw_d  %>%
+  filter(approach != 'with')# %>%
+#  group_by(approach, num_train, perm) %>%
+#  summarize(similarity_correlation = mean(similarity_correlation))
+
+ggplot(data=smw_d) +
+  geom_line(aes(x=num_train, y=similarity_correlation, color=approach, group=interaction(approach, perm)), alpha=0.25) +
+  facet_wrap( ~ word) +
+  labs(x="Number of training sentences", y = "Similarity structure correlation", color = "Approach") +
+  scale_x_continuous(breaks=1:10) +
+  ylim(-1, 1) +
+  scale_color_brewer(palette='Dark2', drop=F) +
+  guides(linetype=F,
+         color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
+  theme_bw(base_size=12) +
+  theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
+```
+
