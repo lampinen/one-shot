@@ -39,7 +39,8 @@ for word in words:
 	if otherword == word:
 	    continue
 	index = numpy.argwhere(vocabulary == otherword)[0]
-	word_similarities[otherword][word] = numpy.dot(numpy.transpose(smw[:, index]), smw)[0] 
+	inner_products = numpy.dot(numpy.transpose(smw[:, index]), smw)[0] 
+	word_similarities[otherword][word] = numpy.delete(inner_products, index) 
 
 with open('../result_data_4/simil_corrs.csv', 'w') as fout:
     fout.write('word, comp_number, approach, perm, num_train, similarity_correlation\n')
@@ -59,7 +60,8 @@ with open('../result_data_4/simil_corrs.csv', 'w') as fout:
 			this_smw = numpy.genfromtxt("../result_data_4/%s_perm%i_train_logs/%s/embedding/num%i_%s_softmax_w_%s.csv" %(word, perm, word, num_train, approach, approach), delimiter=',')
     #		    this_smw = this_smw / numpy.linalg.norm(this_smw)
 			inner_products = numpy.dot(this_smw, smw)
-			sim_corrs = cdist(numpy.array(word_similarities[word].values()), [inner_products], 'correlation')
+			index = numpy.argwhere(vocabulary == otherword)[0]
+			sim_corrs = cdist(numpy.array(word_similarities[word].values()), [numpy.delete(inner_products, index)], 'correlation')
 			newword_sim_corrs[word][num_train].append(sim_corrs)
 			for i in range(3):
 			    fout.write('%s, %i, %s, %i, %i, %f\n' % (word, i, approach, perm, num_train, sim_corrs[i]))
