@@ -9,14 +9,14 @@ output: html_document
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(stringr)
+library(xtable)
 ```
 
 
 ```{r}
-words = c("borrow", "cowboys", "immune", "rice") 
+words = c("borrow")#, "cowboys", "immune", "rice") 
 
-num_train = c(1, 10)
+num_train = c(1, 5, 10)
 perms = 1
 Approaches = c("opt_centroid", "centroid")
 presences = c("wordpresent", "wordabsent")
@@ -40,20 +40,53 @@ for (word in words) {
       }
     }
   }
+  # Pre 
   for (presence in presences) {
-    filename = sprintf("../error_analysis/%s/withword_%s_error_analysis.csv", word, presence) #3 is intentional -- no need to train again
+    filename = sprintf("../error_analysis/%s/pre_%s_error_analysis.csv", word, presence)
       if (!file.exists(filename)) {
         next
       }
       this_d2 = read.csv(filename, header=T)
       this_d2 = this_d2 %>% 
-        mutate(new_word=word, perm=NA, num_train=NA, Approach='with_word', presence=presence)
+        mutate(new_word=word, perm=NA, num_train=10, Approach='pre', presence=presence)
+      d = bind_rows(d, this_d2)
   }
+  # With word
+  for (presence in presences) {
+    filename = sprintf("../error_analysis/%s/withword_%s_error_analysis.csv", word, presence)
+      if (!file.exists(filename)) {
+        next
+      }
+      this_d2 = read.csv(filename, header=T)
+      this_d2 = this_d2 %>% 
+        mutate(new_word=word, perm=NA, num_train=10, Approach='with_word', presence=presence)
+      d = bind_rows(d, this_d2)
+  }
+  
 }
 
 ```
 
 ```{r}
+d = d %>%
+  mutate(this_is_new_word=new.word.index==target)
+```
 
+```{r}
+summary_d = d %>%
+  group_by(presence, this_is_new_word, Approach, num_train) %>%
+  summarize(mean.new.word.log.prob = mean(new.word.log.probability)) %>%
+  ungroup() %>%
+  mutate(test_type=ifelse(this_is_new_word, 'New word in context', ifelse(presence=='wordpresent', 'Other word in context', 'Other word in other context'))) %>%
+  select(-presence, -this_is_new_word)
+summary_d
+```
+```{r}
+xtable(
+summary_d %>%
+  filter(num_train==10) %>%
+  select(-num_train) %>%
+  spread(test_type, mean.new.word.log.prob)
+)
 ```
 
