@@ -454,6 +454,11 @@ def main(_):
 
     sv = tf.train.Supervisor(logdir=FLAGS.save_path + '/tmp/')
     with sv.managed_session() as session:
+      curr_save_path = FLAGS.model_save_path
+      print("Loading model from %s." % curr_save_path)
+      sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
+      print("Successfully restored model.")
+
       if FLAGS.reload_embedding_path is not None:
         curr_embedding = session.run(m.embedding)
         curr_softmax_w = session.run(m.softmax_w)
@@ -473,10 +478,6 @@ def main(_):
         session.run(m.softmax_w_assign_op, feed_dict={m.softmax_w_assign_ph: curr_softmax_w})
         session.run(m.softmax_b_assign_op, feed_dict={m.softmax_b_assign_ph: curr_softmax_b})
 	
-      curr_save_path = FLAGS.model_save_path
-      print("Loading model from %s." % curr_save_path)
-      sv.saver.restore(session, tf.train.latest_checkpoint(curr_save_path))
-      print("Successfully restored model.")
 
       # Run epoch and save errors
       word_test_perplexity = run_epoch(session, mwordtest)
