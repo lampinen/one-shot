@@ -387,7 +387,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 	assert(num_symbols == 1)
 	for batch_i in xrange(bs):
 	    for step_j in xrange(ns):
-		ferr.write('%i, %i, %f\n' % (new_word_index, targets[batch_i, step_j], new_word_probs[batch_i, step_j, 0]))
+		ferr.write('%i, %i, %.16f\n' % (new_word_index, targets[batch_i, step_j], new_word_probs[batch_i, step_j, 0]))
 	    
 
 	costs += cost
