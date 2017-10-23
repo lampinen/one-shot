@@ -1,0 +1,59 @@
+---
+title: "OSW New Word Probability Analysis"
+author: "AndrewLampinen"
+date: "October 23, 2017"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+
+```{r}
+words = c("borrow", "cowboys", "immune", "rice") 
+
+num_train = c(1, 10)
+perms = 1
+Approaches = c("opt_centroid", "centroid")
+presences = c("wordpresent", "wordabsent")
+
+d = data.frame()
+for (word in words) {
+  for (perm in perms) {
+    for (n in num_train) {
+      for (a in Approaches) {
+        for (presence in presences) {
+          filename = sprintf("../error_analysis/%s/perm%i_numtrain%i_%s_%s_error_analysis.csv", word, perm, n, a, presence)
+          if (!file.exists(filename)) {
+            next
+          }
+          this_d = read.csv(filename, header=T)
+          this_d = this_d %>% 
+            mutate(new_word=word, perm=perm, num_train=n, Approach=a, presence=presence)
+          d = bind_rows(d, this_d)
+        }
+        
+      }
+    }
+  }
+  for (presence in presences) {
+    filename = sprintf("../error_analysis/%s/withword_%s_error_analysis.csv", word, presence) #3 is intentional -- no need to train again
+      if (!file.exists(filename)) {
+        next
+      }
+      this_d2 = read.csv(filename, header=T)
+      this_d2 = this_d2 %>% 
+        mutate(new_word=word, perm=NA, num_train=NA, Approach='with_word', presence=presence)
+  }
+}
+
+```
+
+```{r}
+
+```
+
