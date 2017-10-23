@@ -16,7 +16,12 @@ do
 	    done
 	done
     done
-    # with word
+    # baseline: pre
+    test_file=edited_data/${word}_many_many/ptb.train.${word}.fixedwordtest.txt
+    python ptb_error_analysis.py --train_file_path=edited_data/${word}_many_many/ptb.train.no.${word}.txt --word_test_file_path=${test_file} --new_word=${word} --model_save_path=${word}_train_logs/${word}/pre_fine/ --output_prefix=pre_wordpresent_
+    test_file=edited_data/error_falsepositive_test.txt
+    python ptb_error_analysis.py --train_file_path=edited_data/${word}_many_many/ptb.train.no.${word}.txt --word_test_file_path=${test_file} --new_word=${word} --model_save_path=${word}_train_logs/${word}/pre_fine/ --output_prefix=pre_wordabsent_
+    # baseline: with word
     test_file=edited_data/${word}_many_many/ptb.train.${word}.fixedwordtest.txt
     python ptb_error_analysis.py --train_file_path=edited_data/${word}_many_many/ptb.train.no.${word}.txt --word_test_file_path=${test_file} --new_word=${word} --model_save_path=${word}_withword_train_logs/${word}/pre_fine/ --output_prefix=withword_wordpresent_
     test_file=edited_data/error_falsepositive_test.txt
