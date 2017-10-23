@@ -183,7 +183,7 @@ class PTBModel(object):
 
     # Reshape logits to be 3-D tensor for sequence loss
     logits = tf.reshape(logits, [batch_size, num_steps, vocab_size])
-    self._new_word_probs = tf.slice(tf.nn.softmax(logits), [0, 0, new_word_index], [-1, -1, 1]) 
+    self._new_word_probs = tf.log(tf.slice(tf.nn.softmax(logits), [0, 0, new_word_index], [-1, -1, 1])) 
     # for outputting
     self._targets = input_.targets
     # use the contrib sequence loss and average over the batches
@@ -371,7 +371,7 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     fetches["eval_op"] = eval_op
 
   with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.output_prefix + "error_analysis.csv",  "w") as ferr: 
-      ferr.write('new word index, target, new word prob\n')
+      ferr.write('new word index, target, new word log probability\n')
       for step in range(model.input.epoch_size):
 	feed_dict = {}
 	for i, (c, h) in enumerate(model.initial_state):
