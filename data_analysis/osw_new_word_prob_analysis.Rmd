@@ -16,7 +16,7 @@ library(xtable)
 ```{r}
 words = c("borrow", "cowboys", "immune", "rice") 
 
-num_train = c(1, 10)
+num_train = c(1, 5, 10)
 perms = 1
 Approaches = c("opt_centroid", "centroid")
 presences = c("wordpresent", "wordabsent")
