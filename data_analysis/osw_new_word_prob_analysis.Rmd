@@ -14,9 +14,9 @@ library(xtable)
 
 
 ```{r}
-words = c("borrow")#, "cowboys", "immune", "rice") 
+words = c("borrow", "cowboys", "immune", "rice") 
 
-num_train = c(1, 5, 10)
+num_train = c(1, 10)
 perms = 1
 Approaches = c("opt_centroid", "centroid")
 presences = c("wordpresent", "wordabsent")
@@ -69,15 +69,17 @@ for (word in words) {
 
 ```{r}
 d = d %>%
-  mutate(this_is_new_word=new.word.index==target)
+  mutate(this_is_new_word=new.word.index==target,
+         num_train=as.integer(num_train))
 ```
 
 ```{r}
 summary_d = d %>%
+  filter(Approach != 'pre') %>%
   group_by(presence, this_is_new_word, Approach, num_train) %>%
   summarize(mean.new.word.log.prob = mean(new.word.log.probability)) %>%
   ungroup() %>%
-  mutate(test_type=ifelse(this_is_new_word, 'New word in context', ifelse(presence=='wordpresent', 'Other word in context', 'Other word in other context'))) %>%
+  mutate(test_type=ifelse(this_is_new_word, 'New word is correct', ifelse(presence=='wordpresent', 'Wrong but relevant', 'Wrong and irrelevant'))) %>%
   select(-presence, -this_is_new_word)
 summary_d
 ```
@@ -88,5 +90,31 @@ summary_d %>%
   select(-num_train) %>%
   spread(test_type, mean.new.word.log.prob)
 )
+```
+
+```{r}
+xtable(
+summary_d %>%
+  spread(test_type, mean.new.word.log.prob)
+)
+```
+```{r}
+
+summary_by_word_d = d %>%
+  filter(Approach != 'pre') %>%
+  group_by(presence, this_is_new_word, new_word, num_train, Approach) %>%
+  summarize(mean.new.word.log.prob = mean(new.word.log.probability)) %>%
+  ungroup() %>%
+  mutate(test_type=ifelse(this_is_new_word, 'New word is correct', ifelse(presence=='wordpresent', 'Wrong but relevant', 'Wrong and irrelevant'))) %>%
+  select(-presence, -this_is_new_word)
+summary_by_word_d
+```
+
+```{r}
+
+print(xtable(
+summary_by_word_d %>%
+  spread(test_type, mean.new.word.log.prob)
+), include.rownames = F)
 ```
 
