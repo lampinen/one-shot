@@ -11,7 +11,7 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 
-\title{Jabberwocky: One-shot and few-shot learning of word embeddings}
+\title{One-shot and few-shot learning of word embeddings}
 
 \author{
   Andrew K. Lampinen \& James L. McClelland\\
@@ -29,7 +29,7 @@
 \maketitle
 
 \begin{abstract}
-Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we highlight a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could make natural language processing systems much more flexible, by allowing them to learn continually from new words they encounter. 
+Standard deep learning systems require thousands or millions of examples to learn a concept, and cannot integrate new concepts easily. By contrast, humans have an incredible ability to do one-shot or few-shot learning. For instance, from just hearing a word used in a sentence, humans can infer a great deal about it, by leveraging what the syntax and semantics of the surrounding words tells us. Here, we draw inspiration from this to highlight a simple technique by which deep recurrent networks can similarly exploit their prior knowledge to learn a useful representation for a new word from little data. This could make natural language processing systems much more flexible, by allowing them to learn continually from new words they encounter. 
 \end{abstract}
 
 \section{Introduction}
@@ -42,8 +42,8 @@ Long time the manxome foe he sought—\\
 So rested he by the Tumtum tree,\\
 And stood awhile in thought.}
 \end{quote}
-Despite the fact that there are several nonsense words, we can follow the narrative of the poem and understand approximately what many of the words mean by how they relate other words. This a vital skill for interacting with the world -- we constantly need to learn new words and ideas from context. Even beyond language, humans are often able adapt quickly to gracefully accomodate situations that differ radically from what they have seen before. Complementary learning systems theory \citep{Kumaran2016} suggests that it is the interaction between a slow-learning system that understands the task (i.e. a deep-learning like system) and a fast-learning system (i.e. a memory-like system) that allows humans to adapt rapidly from few experiences. \par 
-Compared to humans, standard deep learning systems usually require much more data to learn a concept or task, and sometimes generalize poorly \cite{Lake2016}. They can be trained to learn a concept in one-shot if this is their sole task \cite[e.g.]{Vinyals2016}, but these models simply discard this information after a single use. Can deep learning systems performing more complex tasks build on their prior knowledge to learn effectively from a few pieces of information? In other words, how can they integrate learning experiences across different timescales? In this paper, we explore this issue in the specific context of creating a useful representation for a new word based on its context. \par
+Despite the fact that there are several nonsense words, we can follow the narrative of the poem and understand approximately what many of the words mean by how they relate other words. This a vital skill for interacting with the world -- we constantly need to learn new words and ideas from context. Even beyond language, humans are often able adapt quickly to gracefully accomodate situations that differ radically from what they have seen before. Complementary learning systems theory \citep{Kumaran2016} suggests that it is the interaction between a slow-learning system that learns structural features of the world (i.e. a deep-learning like system) and a fast-learning system (i.e. a memory-like system) that allows humans to adapt rapidly from few experiences. \par 
+By comparison, standard deep learning systems usually require much more data to learn a concept or task, and sometimes generalize poorly \cite{Lake2016}. They can be trained to learn a concept in one-shot if this is their sole task \cite[e.g.]{Vinyals2016}, but this limits the types of tasks that can be performed. Furthermore, these models typically discard this information after a single use. In order for deep learning systems to be adaptible, they will need to build on their prior knowledge to learn effectively from a few pieces of information. In other words, they will need to integrate learning experiences across different timescales, as complementary learning systems theory suggests that humans and other animals do. In this paper, we explore this broad issue in the specific context of creating a useful representation for a new word based on its context. \par
 \subsection{Background}
 Continuous representations of words have proven to be very effective \cite[e.g.]{Mikolov2013, Pennington2014}. These approaches represent words as vectors in a space, which are learned from large corpuses of text data. Using these vectors, deep learning systems have achieved success on tasks ranging from natural language translation \cite[e.g.]{Wu2016} to question answering \cite[e.g.]{Santoro2017}. \par
 However, these word vectors are typically trained on very large datasets, and there has been surprisingly little prior work on how to learn embeddings for new words once the system has been trained. \citet{Cotterell2016} proposed a method for incorporating morphological information into word embeddings that allows for limited generalization to new words (e.g. generalizing to unseen conjugations of a known verb). However, this is not a general system for learning representations for new words, and requires building in rather strong structural assumptions about the language and having appropriately labelled data to exploit them. \par
@@ -103,17 +103,38 @@ It is interesting to note that only one of these words appears in the PTB test d
 \caption{Comparing optimizing the input embedding, output embedding, or both -- where is the magic happening?}
 \label{skipping_results}
 \end{figure}
-Because the model we are using has distinct input and output embeddings, we are able to compare learning these individually to evaluate where the benefits of learning about the new word are occurring. Specifically, we compared training where only the softmax weights and bias (output embedding) for the new word were changed to training where only the input embedding for the new word was changed, as well as to changing both embeddings as above, for one-shot and ten-shot learning. See Fig. \ref{skipping_results} for our results.\par
+Because the model we are using has distinct input and output embeddings, we are able to compare learning these individually to evaluate where the benefits of learning about the new word are occurring. Specifically, we compared training where only the softmax weights and bias (output embedding) were learned, to training where only the input embedding was learned, as well as to learning both, for one- and ten-shot learning. See Fig. \ref{skipping_results} for our results.\par
 We found that it was mostly the output embeddings that are improving. In one-shot learning, changing the input embedding alone causes almost no improvement, and changing the both embeddings does not see substantially different from changing just the output embedding. However, with ten training sentences the updated input embedding is producing some improvement, both alone and when trained together with the output embedding. Even in this case, however, the effect of the input embedding is still much smaller than the effect of the output embedding. That is, the model is mostly improving at predicting the new word in context, rather than predicting context based on the new word. \par 
 This is sensible for several reasons. First, whatever the new word conveys about the context will already be partly conveyed by the other words in the context. Second, our training approach was more unnatural than the situations in which a human might experience a new word, or even than the pretraining for the network, in that the sentences were presented without the context of surrounding sentences. This means that the model has less data to learn about how the new word predicts surrounding context, and less information about the context which predicts this word. This may also explain why full training with the word still produced better results in some cases than updating for it.\par
-
+\subsection{Digging deeper into model performance} \label{digging_deeper}
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|rrr|}
+  \hline
+  & New word is correct & Wrong but relevant & Wrong and irrelevant \\ 
+  \hline
+  Full training with the word & -9.21 & -12.75 & -15.13 \\ 
+  Centroid & -9.16 & -9.46 & -10.44 \\ 
+  Optimizing from centroid & -6.20 & -9.32 & -10.91 \\ 
+   \hline
+\end{tabular}
+\caption{Average log-probabilities of new word when: the word is the current target, the new word is not the current target but does appear in the current sentence, and the word doesn't appear in the sentence or context. (Analysis computed with 10 training sentences, patterns are similar but less severe with fewer sentences, see Appendix \ref{log_prob_appendix}.)} \label{word_prob_table} 
+\end{table}
+Of course, as the above results illustrate, simply looking at change in perplexity as a measure of success can be misleading -- it is hard to decide whether the model is learning something useful or overfitting. Thus we conducted more detailed analyses of the model's predictions. Since we know that most of the benefit of the one-shot training in our model comes from predicting the new word in context, we evaluated how well the word was predicted in three cases: when it was the actual target word, when it was not the current target but did appear in the sentence, and in ``irrelevant'' sentences. The first two cases were evaluated on our held-out test data-set for that word, the last was evaluated on the first 10 sentences of the PTB test corpus (which came from an article that does not contain any of the words we used). We compared the average log-probability assigned to the new word after the softmax in each of these cases for the full training with the word baseline, the centroid approach to learning from 10 words, and our approach. See Table \ref{word_prob_table} for our results. \par 
+The model fully trained with the word shows clear distinctions between the three conditions -- the word is estimated to be about 10 times more likely in contexts where it appears than in irrelevant contexts, and is estimated to be about 25 times more likely again when it actually appears. However, the model severely underestimates the probability of the word when it does appear; the word would have a similar log probability under a uniform distribution over the whole vocabulary. The centroid method also has this issue, but in addition it does not even distinguish particularly well between contexts. The word is only estimated to be about 4 times more likely when it is the target than in irrelevant contexts. \par
+By contrast, our approach results in a good distinction between contexts -- the word is predicted to be about 5 times as likely in context where it appears compared to the irrelevant context, and about 25 times as likely again when the word actually appears. These relative probabilities are quite similar to those exhibited by the model fully trained with the word. Furthermore, the optimized embedding is much more successful at predicting the word when it appears. In all these respects, it appears superior to the centroid approach. When compared to the full training with the word, however, it appears that the base rate estimates of the prevalence of the word are inflated (which is sensible, even with 100 negative samples per positive sample in our training data the prevalence of the word is much higher than in the actual corpus). This explains the residual small increase in test perplexity on the dataset not containing the new word. It is possible that this could be ameliorated either by setting a prior on the bias for the new (perhaps penalize the \(\ell_2\) norm of the distance of the bias from the values for other rare words), or with a validation set, or just by using more negative samples during training. In any case, it appears that the optimized embeddings are capturing some of the important features of when the word does and does not appear, and are doing so more effectively than the centroid approach.
 \subsection{Embedding similarity analyses}
-{\color{red} TODO and integrate into discussion}
-
+It has often been noted that relationships between word embeddings capture semantic features of the words, such as analogies between words \citep{Mikolov2013}. Thus it is natural to ask to what extent the word vectors produced by one-shot learning produce similarity structures close to those produced by full training with the word. To address this question, we computed the dot product\footnote{This seems to be the appropriate similarity ``metric'', given that the logits for the softmax over the vocabulary are formed by a matrix-vector multiplication which amounts to computing these dot products.} of the new word output embedding with all other word output embeddings. This vector of dot-product results can be thought of as a similarity map for the new word. We then compared these similarity maps to the similarity maps produced by full training with the word by computing correlations between the similarity maps. (See Appendix \ref{supp_fig_appdx} Fig. \ref{RSA_results} for our results.)\par
+Different runs of full training with the word produced very correlated similarity structures (all correlations greater than 0.9). Thus there does appear to be some consistent semantic structure that the embeddings are capturing. However, neither the centroid nor the optimizing one-shot learning methods seemed to be performing particulary well at capturing this structure. The centroid method actually produced similarity structures that were \textbf{negatively} correlated with the full training similarity structures in three out of four cases! The optimizing method did slightly better, but only in that most of its similarity structures were effectively uncorrelated with the full training similarity structure. Only in one case each did the methods produce a similarity structure that was strongly positively correlated with the structure produced by full training with the word. \par
+These results are difficult to interpret. On the one hand, the consistency of the semantic knowledge produced by the network when fully trained with the word suggests that it is discovering important structure. On the other hand, the later learning approaches actually produce even more internally consistency, at least when training with several sentences. Full training with the word produces an average correlation of 0.93 between different training runs, whereas optimizing with all ten sentences produces an average correlation of 0.97 (and optimizing with 1 sentence produces an average correlation of 0.50). Furthermore, the results of section \ref{digging_deeper} above suggest that our approach is doing about as well at distinguishing contexts where the new word does and does not appear. That is, the optimizing runs are extracting consistent structure as well, they are just creating different representational structures than the full training runs. \par
+These different representations may be explained by the removal of some contextual cues when the sentences are presented in isolation (noted above) -- the networks doing full training with the word are able to pay attention to features across sentence boundaries, which may give them exposure to word co-occurrences that the one-shot learning approach is missing. This could be solved in real contexts by just including the surrounding context sentences in the training, and this might result in more similar representational structure between full training with the word and learning the word later. \par
 \section{Discussion}
-Overall, using our technique of updating only the embedding vectors of a word while training on sentences containing it and negative sampled sentences from the networks past experience seems quite effective. It allows for substantial reductions in perplexity on text containing the new word, without greatly interfering with knowledge about other words. This technique could easily be extended to adapting systems to other types of new experiences, for example a vision network for an RL agent could have a few new filters per layer added and trained to accomodate a new type of object. \par  
-Under what circumstances will this strategy fail? Complementary learning systems theory \citep{Kumaran2016}, from which we drew inspiration, suggests that information which is \emph{schema-consistent} (i.e. fits in with the network's previous knowledge) can be integrated easily, whereas \emph{schema-inconsistent} knowledge (i.e. knowledge that differs from the network's previous experience) will cause interference. Similar principles should apply here. Our approach should work for learning a new word on a topic which is already known, but would likely fail to learn from a new word in a context that is not well understood. For example, it would be difficult to learn a new German word from context if the model has only experienced English language. \par  
-On the other hand, this perspective also provides promises. We expect that our technique would perform even better in a language system that had a more sophisticated understanding of language, because it will have more prior knowledge from which it can bootstrap understanding. Thus it would be very interesting to apply our technique in a system using language on more complicated tasks like question answering, such as \citet{Santoro2017}, or in a grounded context, such as \citet{Hermann2017}. \par 
+Overall, using our technique of updating only the embedding vectors of a word while training on sentences containing it and negative sampled sentences from the networks past experience seems quite effective. It allows for substantial reductions in perplexity on text containing the new word, without greatly interfering with knowledge about other words. Furthermore, it seems to be capturing more useful structure about how the word is used in context than previous approaches, and performs close to as well as full training with the word. These results are exciting beyond their potentiatl applications to natural language processing -- this technique could easily be extended to adapting systems to other types of new experiences, for example a vision network for an RL agent could have a few new filters per layer added and trained to accomodate a new type of object. \par 
+Utheir nder what circumstances will this strategy fail? Complementary learning systems theory \citep{Kumaran2016}, from which we drew inspiration, suggests that information which is \emph{schema-consistent} (i.e. fits in with the network's previous knowledge) can be integrated easily, whereas \emph{schema-inconsistent} knowledge (i.e. knowledge that differs from the network's previous experience) will cause interference. Similar principles should apply here. Our approach should work for learning a new word on a topic which is already known, but would likely fail to learn from a new word in a context that is not well understood. For example, it would be difficult to learn a new German word from context if the model has only experienced English language. \par  
+On the other hand, this perspective also provides promises. We expect that our technique would perform even better in a system that had a more sophisticated understanding of language, because it would have more prior knowledge from which to bootstrap understanding of new words. Thus it would be very interesting to apply our technique on more complicated tasks like question answering, such as \citet{Santoro2017}, or in a grounded context, such as \citet{Hermann2017}. \par 
+\subsection{Word-by-word differences}
+We have presented all the results in this paper broken down by word rather than as averages, because there were large word-by-word differences on almost every analysis. Full training with the word did not improve the new word test perplexity more than the centroid approach on most of the words, but on two of them (``immune'' and ``strategist'') it did substantially better than even optimizing. Similarly, the optimizing method produced representational similarity structures that were more correlated with the full training with the word structure on three of the words we tested, but on a fourth the centroid approach produced a higher correlation. These results are likely due to the complex interactions between the context and the network's prior knowledge, and are difficult to quantify exactly. \par
+However, variable results are not a unique feature of learning the words later -- even full training with the word produced much better results on some words than others. Especially when considering small slices of a dataset (like the handful out of 42,000 sentences that contained the words we considered), the data can be quite noisy. Furthermore, it's likely that some types of words are easier to learn than others (e.g. verbs may have more complex interactions with their context than nouns do). Thus these diverse patterns in our results should not be interpreted as a unique deficiency in our technique. Even standard deep learning is fallible when evaluated on its ability to learn from small amounts of data embedded in a larger dataset. \par
 \section{Conclusions}
 We have presented a technique for doing one- or few-shot learning of word embeddings from text data: freeze all the weights in the network except the embeddings for the new word, and then optimize these embeddings for the sentence, interleaving with negative examples from network's prior experience and stopping early. This results in substantial improvement of the ability to predict the word in context, with minimal impairment of prediction of other words. This technique could allow natural language processing systems to adapt more flexibly to a changing world, like humans do. More generally, it could serve as a model for how to integrate rapid adaption into deep learning systems.  
 
@@ -136,4 +157,52 @@ We have presented a technique for doing one- or few-shot learning of word embedd
 \caption{Interference with prior knowledge caused by na\"{i}ve use of our approach}
 \label{interference_fig}
 \end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{../../results/10perms4_similarity_correlations.png}
+\caption{Similarity of representational similarity: how correlated are the similarity structures generated by the different methods with the similarity structure produced by training with the word?}
+\label{RSA_results}
+\end{figure}
+
+\section{Log-probability analysis broken out} \label{log_prob_appendix}
+% latex table generated in R 3.4.1 by xtable 1.8-2 package
+% Mon Oct 23 20:24:49 2017
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrlrrr}
+  \hline
+new\_word & num\_train & Approach & New word is correct & Wrong and irrelevant & Wrong but relevant \\ 
+  \hline
+borrow &   1 & centroid & -9.75 & -10.43 & -9.65 \\ 
+  borrow &   1 & opt\_centroid & -6.31 & -10.10 & -8.51 \\ 
+  borrow &   5 & centroid & -9.69 & -10.42 & -9.64 \\ 
+  borrow &   5 & opt\_centroid & -5.78 & -10.44 & -8.71 \\ 
+  borrow &  10 & centroid & -9.65 & -10.42 & -9.61 \\ 
+  borrow &  10 & opt\_centroid & -6.46 & -11.03 & -9.73 \\ 
+  borrow &  10 & with\_word & -8.74 & -15.31 & -13.21 \\ 
+  cowboys &   1 & centroid & -9.33 & -10.40 & -9.06 \\ 
+  cowboys &   1 & opt\_centroid & -7.57 & -8.88 & -8.84 \\ 
+  cowboys &   5 & centroid & -9.26 & -10.43 & -9.09 \\ 
+  cowboys &   5 & opt\_centroid & -6.27 & -11.21 & -9.06 \\ 
+  cowboys &  10 & centroid & -9.26 & -10.42 & -9.10 \\ 
+  cowboys &  10 & opt\_centroid & -6.23 & -11.10 & -9.71 \\ 
+  cowboys &  10 & with\_word & -8.47 & -15.63 & -12.75 \\ 
+  immune &   1 & centroid & -9.15 & -10.53 & -9.63 \\ 
+  immune &   1 & opt\_centroid & -8.99 & -9.17 & -9.39 \\ 
+  immune &   5 & centroid & -9.00 & -10.47 & -9.49 \\ 
+  immune &   5 & opt\_centroid & -7.72 & -9.90 & -9.05 \\ 
+  immune &  10 & centroid & -9.01 & -10.50 & -9.49 \\ 
+  immune &  10 & opt\_centroid & -6.23 & -11.03 & -8.96 \\ 
+  immune &  10 & with\_word & -9.85 & -14.17 & -12.41 \\ 
+  rice &   1 & centroid & -8.67 & -10.44 & -9.64 \\ 
+  rice &   1 & opt\_centroid & -7.65 & -10.09 & -8.80 \\ 
+  rice &   5 & centroid & -8.66 & -10.43 & -9.61 \\ 
+  rice &   5 & opt\_centroid & -6.35 & -10.20 & -8.14 \\ 
+  rice &  10 & centroid & -8.66 & -10.42 & -9.61 \\ 
+  rice &  10 & opt\_centroid & -5.85 & -10.47 & -8.64 \\ 
+  rice &  10 & with\_word & -9.84 & -15.43 & -12.44 \\ 
+   \hline
+\end{tabular}
+\end{table}
 \end{document}
