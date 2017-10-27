@@ -53,13 +53,18 @@ Can we do better? A deep learning system which has been trained to perform a lan
 We suggest that we already have a way to update the representations of a network while accounting for its current knowledge and inferences -- this is precisely what backpropagation was invented for! Of course, we cannot simply train the whole network to accomodate this new word, this would lead to catastrophic interference. However, \citet{Rumelhart1993} showed that a simple network could be taught about a new input by freezing all its weights except for those connecting the new input to the first hidden layer, and optimizing these by gradient descent as usual. They showed that this resulted in the network making appropriate generalizations about the new input, and by design the training procedure does not interfere with the network's prior knowledge. They used this as a model for human concept learning (as have other authors, for example \citet{Rogers2004}). \par
 We take inspiration from this work to guide our approach. To learn from one sentence (or a few) containing a new word, we freeze all the weights in the network except those representing the new word (in a complex NLP system, there may be more than one such set of weights, for example the model we evaluate has distinct input and output embeddings for each word). We then use stochastic gradient descent (\(\eta = 0.01\)) to update the weights for the new word using 100 epochs of training over the sentence(s) containing it. \par
 Of course, there are a variety of possible initializations for the embeddings before optimizing. In this paper, we consider three possibilities: 
+\vspace{-0.5em}
 \begin{enumerate}
+\setlength\itemsep{0em}
 \item Beginning with the current embedding for the word (since the model has never seen the word, and thus has been trained to never produce it, this will likely be an embedding that is far from any outputs the network typically produces).
 \item Beginning with a vector of zeros.
 \item Beginning with the centroid of the other words in the sentence, which \citet{Lazaridou2017} suggested was a useful estimate of an appropriate embedding.
 \end{enumerate}
+\vspace{-0.5em}
 We compare these to two baselines:
+\vspace{-0.5em}
 \begin{enumerate}
+\setlength\itemsep{0em}
 \item The centroid of the embeddings for the other words in the sentence, as in \citet{Lazaridou2017}. 
 \item Training the model with the 10 training sentences included in the corpus from the beginning (i.e. the ``standard'' deep-learning approach).
 \end{enumerate}
@@ -77,11 +82,11 @@ In order to test our one-shot word-learning algorithm on the Penn Treebank, we c
 \begin{figure}
 \centering
 \begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{../../results/10perms5_replay_delta_perplexity.png}
+\includegraphics[width=\textwidth]{../../results/10perms6_replay_delta_perplexity.png}
 \caption{Percent change in perplexity on 10 test sentences containing new word.}
 \end{subfigure}
 \begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{../../results/10perms5_replay_cost_to_others.png}
+\includegraphics[width=\textwidth]{../../results/10perms6_replay_cost_to_others.png}
 \caption{Percent change in perplexity on full PTB test corpus.}
 \end{subfigure}
 \caption{When using a replay buffer, learning new words does not interfere as substantially with prior knowledge.}
@@ -91,10 +96,8 @@ We first evaluated our approach on the words ``bonuses,'' ``explained,'' ``marke
 Of course, this learning might still cause interference with the networks prior knowledge. In order to evaluate this, we replicated these findings with four new words (``borrow,'' ``cowboys'', ``immune,'' and ``rice''), but also evaluated the change in perplexity on the PTB test corpus (see Appendix \ref{supp_fig_appdx}, Fig. \ref{interference_fig}). Indeed, we found that while the centroid method does not substantially change the test perplexity on the corpus, the optimizing method causes increasingly more interference as more training sentences are provided, up to a ~1\% decline in the case of training on all 10 sentences. \par
 This is not necessarily surprising, the base rate of occurrence of the new word in the training data is artificially inflated relative to its true base rate probability. This problem of learning from data which is locally highly correlated and biased has been solved in many recent domains by the use of replay buffers to interleave learning, especially in reinforcement learning \citep[e.g]{Mnih2015}. The importance of replay is also highlighted in the complementary learning systems theory \citep{Kumaran2016} that helped inspire this work. \par
 We therefore tested whether using a replay buffer while learning the new word would ameliorate this interference. Specifically, we sampled 100 negative sentences from the corpus without the word that the network was pre-trained on, and interleaved these at random with the sentences containing the new word (the same negative samples were used for each training epoch). \par
-Indeed, interleaving sentences without the word substantially reduced the interference caused by the new word, see Fig. \ref{ameliorating_interference_fig}. This interleaving did not seem to substantially impair learning of the new word. \par
-{\color{red} TODO: update figure and paragraphs above + below with new results, at a glance at one run it looks like the interference will be less than 0.05\% at worst}\par
+Indeed, interleaving sentences without the word substantially reduced the interference caused by the new word, see Fig. \ref{ameliorating_interference_fig}. The maximum increase in perplexity was \(0.06\%\). This interleaving did result in somewhat less improvement on the new-word test sentences, but this is probably simply because the test sentences over-represent the new word and the network was overfitting to this and predicting the new word much more than is warranted. The optimizing approach still reduces perplexity on the dataset containing the new word by up to 33\%. \par
 It is interesting to note that only one of these words appears in the PTB test data (``cowboys''), and it only appears once. Why then does full training with the word result in lowered test perplexity on the PTB test data in three out of four cases? This may just be chance variation, of course, but in general we would expect learning about a word to be useful not just for the sake of learning about that word, but because each word is a small piece of the signal by which the network learns about language more generally. Even if a word does not appear in the test corpus, the network may learn something useful from exposure to it.\par 
-
 
 \subsection{Where is the magic happening?}
 \begin{figure}
