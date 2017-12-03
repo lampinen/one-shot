@@ -40,7 +40,29 @@ def edit_many_many_splits_for_target_word(word):
 		word_train_f.writelines(new_lines)
 
 
-edit_many_many_splits_for_target_word("rice")
-edit_many_many_splits_for_target_word("immune")
-edit_many_many_splits_for_target_word("borrow")
-edit_many_many_splits_for_target_word("cowboys")
+#edit_many_many_splits_for_target_word("rice")
+#edit_many_many_splits_for_target_word("immune")
+#edit_many_many_splits_for_target_word("borrow")
+#edit_many_many_splits_for_target_word("cowboys")
+
+hundred_words = ['ab', 'absolutely', 'agricultural', 'aim', 'animals', 'announcing', 'arguments', 'assist', 'averaged', 'bass', 'bullish', 'calculations', 'carefully', 'claiming', 'compare', 'conceded', 'congressman', 'consortium', 'contest', 'creation', 'cumulative', 'danger', 'darman', 'die', 'discrimination', 'disney', 'dominant', 'dorrance', 'edwards', 'efficiency', 'elderly', 'enable', 'encouraging', 'entry', 'environmentalists', 'execution', 'expenditures', 'facts', 'formula', 'gaf', 'geneva', 'globe', 'golf', 'healthcare', 'homeless', 'honor', 'horse', 'incest', 'informed', 'investigators', 'iron', 'jackson', 'judgment', 'knight', 'lake', 'lend', 'louisville', 'lowest', 'lucrative', 'maturing', 'minute', 'mississippi', 'motorola', 'museum', 'nabisco', 'netherlands', 'nigel', 'nine-month', 'owning', 'petrochemical', 'pioneer', 'prepare', 'print', 'pro-choice', 'recognized', 'referred', 'regarded', 'rejection', 'requests', 'resorts', 'responsibilities', 'rolled', 'sansui', 'serving', 'setback', 'similarly', 'somewhere', 'sounds', 'staffers', 'stolen', 'treasurys', 'treat', 'truth', 'utah', 'vulnerable', 'ward', 'warsaw', 'wedtech', 'wheat', 'wisconsin'] 
+
+replay_line_numbers = random.randint(40175, size=num_replay_lines)
+
+def edit_files_for_hundred_words():
+    replay_lines = []
+    with open(output_dir + '/hundred_words/' + output_file_prefix + "no.hundredwords.txt", "r") as fin:
+        for i, line in enumerate(fin.readlines()):
+            if i in replay_line_numbers:
+                replay_lines.append(line)
+
+    random.shuffle(replay_lines)
+    for word in hundred_words:
+        with open(output_dir + '/hundred_words/' + output_file_prefix + word + '.wordtrain.txt', "r") as word_train_f:
+            curr_lines = word_train_f.readlines()
+        new_lines = curr_lines + replay_lines
+        random.shuffle(new_lines)
+        with open(output_dir + '/hundred_words/' + output_file_prefix + word + '.wordtrain.txt', "w") as word_train_f:
+            word_train_f.writelines(new_lines)
+                
+edit_files_for_hundred_words()
