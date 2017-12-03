@@ -26,6 +26,8 @@ with open(data_file, "r") as fin:
 targets = [word for word in word_counter.keys() if word_counter[word] == 20]
 print(targets)
 
+hundred_targets = filter(lambda x: x not in ['bonuses', 'explained', 'strategist', 'marketers', 'rice', 'cowboys', 'borrow', 'immune'], targets)[:100] 
+
 def create_split_for_target_word(word, num_train=1):
     word_lines = []
     with open(data_file, "r") as fin:
@@ -43,7 +45,29 @@ def create_split_for_target_word(word, num_train=1):
     with open(output_dir + output_file_prefix + word + '.wordtest.txt', "w") as word_test_f:
 	word_test_f.writelines(word_lines)
 	
-	
+def any_shared_elem(a, b):
+    return any([x in b for x in a])
+
+def create_split_for_hundred_words(hundred_targets, num_train=10):
+    word_lines = {word: [] for word in hundred_targets}
+    with open(data_file, "r") as fin:
+	with open(output_dir + '/hundred_words/' +  output_file_prefix + "no.hundredwords.txt", "w") as noword_f:
+		for line in fin.readlines():
+                    split_line = line.split()
+		    if any_shared_elem(hundred_targets, split_line):
+                        for word in hundred_targets:
+                            if word in split_line:
+                                word_lines[word].append(line)
+		    else:
+			noword_f.write(line)
+
+    for word in hundred_targets:
+        with open(output_dir + '/hundred_words/' + output_file_prefix + word + '.wordtrain.txt', "w") as word_train_f:
+            for i in xrange(num_train):
+                chosen_line = word_lines[word].pop(random.randint(len(word_lines[word])))
+                word_train_f.write(chosen_line)
+        with open(output_dir + '/hundred_words/' +output_file_prefix + word + '.wordtest.txt', "w") as word_test_f:
+            word_test_f.writelines(word_lines[word])
 
 def create_many_splits_for_target_word(word, num_train=10):
     word_lines = []
@@ -118,4 +142,6 @@ def create_many_many_splits_for_target_word(word):
 #create_many_many_splits_for_target_word("rice")
 #create_many_many_splits_for_target_word("immune")
 #create_many_many_splits_for_target_word("borrow")
-create_many_many_splits_for_target_word("cowboys")
+#create_many_many_splits_for_target_word("cowboys")
+
+create_split_for_hundred_words(hundred_targets)
