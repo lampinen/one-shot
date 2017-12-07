@@ -39,28 +39,26 @@ def edit_many_many_splits_for_target_word(word):
 	    with open(output_dir + '/' + word + '_many_many/' + output_file_prefix + word + 'perm' + str(j) + '.' + str(this_num) + 'wordtrain.txt', "w") as word_train_f:
 		word_train_f.writelines(new_lines)
 
-
-
 def word_overlap_metric(x, y):
     y_split = y.split()
     x_split = x.split()
-    return sum([a in y_split for a in x.split()]) / (0.5 * (len(x_split) + len(y_split)))
+    return sum([a in y_split for a in x.split() if a != "<unk>"]) / (0.5 * (len(x_split) + len(y_split)))
 
 
 word_counts = Counter()
-with open('../raw_data/ptb.train.txt', 'r') as ftrain:
+with open('raw_data/ptb.train.txt', 'r') as ftrain:
     for line in ftrain.readlines():
                 word_counts.update(line.split())
 
 total_count = sum(word_counts.values())
 log_probabilities = dict(word_counts)
-for k, v in probabilities.items():
+for k, v in log_probabilities.items():
         log_probabilities[k] = float(v) / total_count
 
 def smarter_word_overlap_metric(x, y):
     y_split = y.split()
     x_split = x.split()
-    return sum([-log_probabilities[a] for a in x_split if a in y_split])
+    return sum([-log_probabilities[a] for a in x_split if a in y_split and a != "<unk>"])
 
 def edit_many_many_splits_for_target_word_SW(word, metric=smarter_word_overlap_metric):
     num_train = 10
