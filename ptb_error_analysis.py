@@ -83,7 +83,7 @@ flags.DEFINE_string("new_word", 'bonuses',
                     "New word to learn.")
 flags.DEFINE_string("vocab_file_path", "raw_data/ptb.train.txt",
                     "File from which to build the model vocabulary.")
-flags.DEFINE_string("save_path", 'error_analysis/',
+flags.DEFINE_string("save_path", 'output_analysis',
                     "Output directory.")
 flags.DEFINE_bool("use_fp16", False,
                   "Train using 16-bit floats instead of 32bit floats")
@@ -174,8 +174,8 @@ class PTBModel(object):
         if time_step > 0: tf.get_variable_scope().reuse_variables()
         (cell_output, state) = cell(inputs[:, time_step, :], state)
         outputs.append(cell_output)
-
     output = tf.reshape(tf.stack(axis=1, values=outputs), [-1, size])
+    self.outputs = output
     self.softmax_w = softmax_w = tf.get_variable(
         "softmax_w", [size, vocab_size], dtype=data_type())
     self.softmax_b = softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
@@ -353,7 +353,7 @@ class TestConfig(object):
   vocab_size = 10000
 
 
-def run_epoch(session, model, eval_op=None, verbose=False):
+def run_epoch(session, model, eval_op=None, verbose=False, vocabulary=None):
   """Runs the model on the given data."""
   start_time = time.time()
   costs = 0.0
@@ -365,39 +365,48 @@ def run_epoch(session, model, eval_op=None, verbose=False):
       "cost": model.cost,
       "final_state": model.final_state,
       "new_word_probs": model.new_word_probs,
+      "inputs": model._input.input_data,
+      "outputs": model.outputs,
       "targets": model.targets
   }
   if eval_op is not None:
     fetches["eval_op"] = eval_op
 
-  with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.output_prefix + "error_analysis.csv",  "w") as ferr: 
-      ferr.write('new word index, target, new word log probability\n')
-      for step in range(model.input.epoch_size):
-	feed_dict = {}
-	for i, (c, h) in enumerate(model.initial_state):
-	  feed_dict[c] = state[i].c
-	  feed_dict[h] = state[i].h
+#  with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.output_prefix + "error_analysis.csv",  "w") as ferr: 
+  overall_outputs = None
+  for step in range(model.input.epoch_size):
+    feed_dict = {}
+    for i, (c, h) in enumerate(model.initial_state):
+      feed_dict[c] = state[i].c
+      feed_dict[h] = state[i].h
 
-	vals = session.run(fetches, feed_dict)
-	cost = vals["cost"]
-	state = vals["final_state"]
-	new_word_probs = vals["new_word_probs"]
-	targets = vals["targets"]
-	bs, ns, num_symbols = np.shape(new_word_probs)  
-	assert(num_symbols == 1)
-	for batch_i in xrange(bs):
-	    for step_j in xrange(ns):
-		ferr.write('%i, %i, %.16f\n' % (new_word_index, targets[batch_i, step_j], new_word_probs[batch_i, step_j, 0]))
-	    
+    vals = session.run(fetches, feed_dict)
+    cost = vals["cost"]
+    state = vals["final_state"]
+    new_word_probs = vals["new_word_probs"]
+    targets = vals["targets"]
+    outputs = vals["outputs"]
+    inputs = vals["inputs"]
+    bs, ns, num_symbols = np.shape(new_word_probs)  
 
-	costs += cost
-	iters += model.input.num_steps
+    costs += cost
+    iters += model.input.num_steps
 
-	if verbose and step % (model.input.epoch_size // 10) == 10:
-	  print("%.3f perplexity: %.3f speed: %.0f wps" %
-		(step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
-		 iters * model.input.batch_size / (time.time() - start_time)))
+    if overall_outputs is None:
+      overall_outputs = outputs[:]
+    else:
+      overall_outputs = np.concatenate([overall_outputs,outputs]) 
 
+    print(vocabulary[inputs])
+    print(len(inputs), len(outputs), len(overall_outputs))
+
+    if verbose and step % (model.input.epoch_size // 10) == 10:
+      print("%.3f perplexity: %.3f speed: %.0f wps" %
+            (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
+             iters * model.input.batch_size / (time.time() - start_time)))
+
+  with open(FLAGS.save_path + "/" + FLAGS.new_word + "/" + FLAGS.output_prefix + "outputs.csv",  "w") as fout: 
+    np.savetxt(fout, overall_outputs)
   return np.exp(costs / iters)
 
 
@@ -432,7 +441,7 @@ def main(_):
   config = get_config()
   eval_config = get_config()
   eval_config.batch_size = 1
-  eval_config.num_steps = 1
+  eval_config.num_steps = 10
 
 
   with tf.Graph().as_default():
@@ -480,7 +489,7 @@ def main(_):
 	
 
       # Run epoch and save errors
-      word_test_perplexity = run_epoch(session, mwordtest)
+      word_test_perplexity = run_epoch(session, mwordtest, vocabulary=np.array(sorted(vocabulary.items(), key=lambda x: int(x[1]))))
 
 
 
