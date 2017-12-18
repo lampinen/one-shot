@@ -929,3 +929,120 @@ d %>%
   summarize(max_delta=max(pct_test_delta), max_nw_delta = min(pct_delta))
 ```
 
+# Hundred words
+
+```{r}
+words = c('ab', 'absolutely', 'agricultural', 'aim', 'animals', 'announcing', 'arguments', 'assist', 'averaged', 'bass', 'bullish', 'calculations', 'carefully', 'claiming', 'compare', 'conceded', 'congressman', 'consortium', 'contest', 'creation', 'cumulative', 'danger', 'darman', 'die', 'discrimination', 'disney', 'dominant', 'dorrance', 'edwards', 'efficiency', 'elderly', 'enable', 'encouraging', 'entry', 'environmentalists', 'execution', 'expenditures', 'facts', 'formula', 'gaf', 'geneva', 'globe', 'golf', 'healthcare', 'homeless', 'honor', 'horse', 'incest', 'informed', 'investigators', 'iron', 'jackson', 'judgment', 'knight', 'lake', 'lend', 'louisville', 'lowest', 'lucrative', 'maturing', 'minute', 'mississippi', 'motorola', 'museum', 'nabisco', 'netherlands', 'nigel', 'nine-month', 'owning', 'petrochemical', 'pioneer', 'prepare', 'print', 'pro-choice', 'recognized', 'referred', 'regarded', 'rejection', 'requests', 'resorts', 'responsibilities', 'rolled', 'sansui', 'serving', 'setback', 'similarly', 'somewhere', 'sounds', 'staffers', 'stolen', 'treasurys', 'treat', 'truth', 'utah', 'vulnerable', 'ward', 'warsaw', 'wedtech', 'wheat', 'wisconsin') 
+
+Approaches = c("opt_centroid", "centroid")
+
+d = data.frame()
+withword_d = data.frame()
+for (word in words) {
+      for (a in Approaches) {
+        filename = sprintf("../result_data_hundred/%s/%s_results_log.csv", word, a)
+        if (!file.exists(filename)) {
+          next
+        }
+        this_d = read.csv(filename, header=F)
+        this_d = this_d %>% 
+          spread(V1, V2) %>%
+          mutate(new_word=word, Approach=a)
+        d = bind_rows(d, this_d)
+        
+      }
+  filename = sprintf("../result_data_hundred/with_hundred_words/%s/withword_results_log.csv", word, word) 
+  if (!file.exists(filename)) {
+    next
+  }
+  this_d2 = read.csv(filename, header=F)
+  this_d2 = this_d2 %>% 
+    spread(V1, V2) %>%
+    mutate(new_word=word) %>%
+    select(-post_new_word_test_perp) %>%
+    rename(post_withword_test_perp = pre_new_word_test_perp) %>%
+    mutate(withoutword_test_perp=head(this_d$pre_new_word_test_perp, n=1), without_test_perp=head(this_d$pre_test_perp, n=1))
+  withword_d = bind_rows(withword_d, this_d2)
+}
+
+```
+
+# Data manipulation
+```{r}
+d = d %>% 
+  filter(!is.na(post_new_word_test_perp)) %>%
+  mutate(nw_delta = post_new_word_test_perp - pre_new_word_test_perp, pct_delta=100*nw_delta/pre_new_word_test_perp, test_delta=post_test_perp - pre_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp,  train_with_word=F) %>%
+  mutate(Approach=factor(Approach, 
+                         levels=c("centroid", "opt", "opt_centroid", "opt_zero", "train_with_word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
+withword_d = withword_d %>% 
+  mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
+```
+
+```{r}
+number_of_new_words = length(words)
+withword_d = withword_d[rep(1:number_of_new_words, each=10),]
+withword_d = withword_d %>%
+  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
+avg_d = d %>% 
+  group_by(num_train, Approach, new_word, train_with_word) %>% 
+  summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta), test_delta=mean(test_delta), pct_test_delta=mean(pct_test_delta)) %>% 
+  ungroup() %>% 
+  rbind(., withword_d) %>%
+  mutate(Approach=factor(Approach, 
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
+```
+
+# Approach comparisons
+
+```{r, echo=FALSE, message=F}
+ggplot() +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word, group=Approach), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
+  facet_wrap(~ new_word) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  scale_color_brewer(palette='Dark2', drop=FALSE) +
+  ylab("Change in perplexity on new word test data (%)") +
+  guides(linetype=F,
+         color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
+  theme_bw(base_size=12) +
+  theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
+```
+```{r}
+ggsave('../results/10perms6_replay_delta_perplexity.png', width=7, height=5)
+```
+
+```{r}
+ggplot() +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_test_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=d, aes(x=num_train,y=pct_test_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
+  facet_wrap(~ new_word) +
+  xlab("Number of training sentences") +
+  scale_x_continuous(breaks=1:10) +
+  ylim(NA, 2.0) +
+  scale_color_brewer(palette='Dark2', drop=F) +
+  ylab("Change in perplexity on PTB test data (%)") +
+  guides(linetype=F,
+         color=guide_legend(
+                 keywidth=0.1,
+                 keyheight=0.4,
+                 default.unit="inch"))+
+  theme_bw(base_size=12) +
+  theme(panel.grid.minor=element_blank(), panel.grid.major=element_blank())
+```
+
+```{r}
+ggsave('../results/10perms6_replay_cost_to_others.png', width=7, height=5)
+```
+
+```{r}
+d %>%
+  group_by(Approach, num_train) %>%
+  summarize(max_delta=max(pct_test_delta), max_nw_delta = min(pct_delta))
+```
