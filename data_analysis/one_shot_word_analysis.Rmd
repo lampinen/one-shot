@@ -110,15 +110,23 @@ withword_d = withword_d %>% mutate(nw_delta = post_withword_test_perp - withoutw
 
 ```{r}
 number_of_new_words = length(words)
-withword_d = withword_d[rep(1:number_of_new_words, each=10),]
+#withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, Approach, new_word, nw_delta, pct_delta, train_with_word)
+  mutate(num_train=10, Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, nw_delta, pct_delta, train_with_word) %>%
+  mutate(Approach=factor(Approach, 
+                         levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
+                         labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
+
+# plotting hack
+NA_d = withword_d %>%
+  mutate(pct_delta=NA, nw_delta=NA)
+
 avg_d = d %>% 
   group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta)) %>% 
   ungroup() %>% 
-  rbind(., withword_d) %>%
+  rbind(., NA_d) %>%
   mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
@@ -128,7 +136,8 @@ avg_d = d %>%
 
 ```{r, echo=FALSE, message=F}
 ggplot() +
-  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach, linetype=train_with_word), size=1) +
+  geom_line(data=avg_d, aes(x=num_train, y=pct_delta, color=Approach), size=1) +
+  geom_point(data=withword_d, aes(x=num_train, y=pct_delta, color=Approach), size=2.5) +
   geom_line(data=d, aes(x=num_train,y=pct_delta, color=Approach, group=interaction(Approach, perm)), alpha=0.25) +
   facet_wrap(~ new_word) +
   xlab("Number of training sentences") +
@@ -861,17 +870,27 @@ withword_d = withword_d %>%
   mutate(nw_delta = post_withword_test_perp - withoutword_test_perp,  pct_delta=100*nw_delta/withoutword_test_perp, test_delta=post_test_perp - without_test_perp, pct_test_delta = 100 * test_delta/pre_test_perp)
 ```
 
+Lost full dataset, so manually entering final results
+```{r}
+withword_d = 
+```
+
 ```{r}
 number_of_new_words = length(words)
-withword_d = withword_d[rep(1:number_of_new_words, each=10),]
+#withword_d = withword_d[rep(1:number_of_new_words, each=10),]
 withword_d = withword_d %>%
-  mutate(num_train=rep(1:10, number_of_new_words), Approach='Full training\nwith the word', train_with_word=T) %>%
-  select(num_train, Approach, new_word, nw_delta, pct_delta, test_delta, pct_test_delta, train_with_word)
+  mutate(num_train=10, Approach='Full training\nwith the word', train_with_word=T) %>%
+  select(num_train, Approach, new_word, pct_delta, pct_test_delta, train_with_word)
+
+# plotting hack
+NA_d = withword_d %>%
+  mutate(pct_delta=NA, nw_delta=NA)
+
 avg_d = d %>% 
   group_by(num_train, Approach, new_word, train_with_word) %>% 
   summarize(nw_delta = mean(nw_delta), pct_delta=mean(pct_delta), test_delta=mean(test_delta), pct_test_delta=mean(pct_test_delta)) %>% 
   ungroup() %>% 
-  rbind(., withword_d) %>%
+  rbind(., NA_d) %>%
   mutate(Approach=factor(Approach, 
                          levels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word"), 
                          labels=c("Centroid", "Optimizing\nfrom current", "Optimizing\nfrom centroid", "Optimizing\nfrom zero", "Full training\nwith the word")))
